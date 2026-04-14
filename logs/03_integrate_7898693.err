@@ -156,3 +156,31 @@ Warning messages:
 3: Key ‘originalexp_’ taken, using ‘rna_’ instead 
 Total cells loaded: 2,877,370
 Merging all objects (Seurat v5 layer-aware merge)...
+Merged object: 2,877,370 cells, 50,990 genes
+Layers: data.1, data.17, data.18, data.19, data.20, data.21, counts.2, counts.3, counts.4, counts.5, counts.6, counts.7, counts.8, counts.9, counts.10, counts.11, counts.12, counts.13, counts.14, counts.15, counts.16, counts.19, scale.data.GOF.Kudo.19, scale.data.LOF.Kudo.19, scale.data.Vehicle.Kudo.19, scale.data.Yoda.Kudo.19, scale.data.Urotherlium.19, scale.data.GSM3827175_NMU_O_P.UroBladderOrganoid.19, scale.data.GSM3827176_NMU_O_D.UroBladderOrganoid.19, scale.data.UroBladderOrganoid.19, scale.data.19
+Filling 865,201 missing pct_mt values with 0 (pre-processed)
+
+Cells per sample (batch):
+  ChenSpatial          : 203,139
+  EmbryosE9_5ToE13_5   : 1,866,824
+  KidneyE18_5_1        : 20,100
+  KidneyHealthy1       : 10,241
+  KidneyHealthy2       : 2,820
+  KidneyHealthy3       : 19,957
+  KidneyHealthy4       : 7,334
+  KidneyHealthy5       : 11,102
+  KidneyrUUO1          : 2,866
+  KidneyTET2UUO        : 17,272
+  KidneyUUO1           : 5,748
+  KidneyUUO2           : 2,056
+  KidneyUUO3           : 4,279
+  KidneyUUO4           : 11,650
+  KidneyUUO5           : 12,944
+  KidneyUUO6           : 16,976
+  KidneyUUO7           : 6,509
+  KidneyUUO8           : 8,050
+  KudoUUOUrothelium    : 190,338
+  LakesnRNA            : 315,764
+  MKA                  : 141,401
+
+Normalizing (log-normalization per sample layer)...
