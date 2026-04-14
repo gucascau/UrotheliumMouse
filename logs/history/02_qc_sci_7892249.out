@@ -1,0 +1,8 @@
+Job Statistics for 7892249:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+         7892249     xxw004 2026-04-12T00:36:32 2026-04-12T00:38:36   00:02:04  02:01.548     FAILED   r1pl-hpcf-h05 
+   7892249.batch            2026-04-12T00:36:32 2026-04-12T00:38:36   00:02:04  02:01.546     FAILED   r1pl-hpcf-h05 
+  7892249.extern            2026-04-12T00:36:32 2026-04-12T00:38:36   00:02:04  00:00.001  COMPLETED   r1pl-hpcf-h05 
+Requested Resources: billing=8,cpu=8,mem=256G,node=1
+Maximum CPU Memory: 44992.34M; 	CPU Efficiency: 12.30% of 00:16:32 core-walltime

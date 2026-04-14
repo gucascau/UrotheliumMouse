@@ -1,0 +1,15 @@
+Loading required package: SeuratObject
+Loading required package: sp
+
+Attaching package: ‘SeuratObject’
+
+The following objects are masked from ‘package:base’:
+
+    intersect, t
+
+=== 03b: Export for scVI/scANVI ===
+Excluded from integration : BladderHomogenate1, BladderHomogenate2
+Excluded (no raw counts)  : ChenSpatial, LakesnRNA, MKA, KudoUUOUrothelium, KidneyUUO7, KidneyUUO8
+Loading merged object to retrieve HVG list...
+Error in readRDS(merged_path) : error reading from connection
+Execution halted

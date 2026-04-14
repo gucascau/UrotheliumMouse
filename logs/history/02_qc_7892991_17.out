@@ -1,0 +1,8 @@
+Job Statistics for 7892991_17:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+      7892991_17     xxw004 2026-04-13T10:30:23 2026-04-13T10:30:34   00:00:11  00:10.200  COMPLETED   r1pl-hpcf-h02 
+7892991_17.batch            2026-04-13T10:30:23 2026-04-13T10:30:34   00:00:11  00:10.198  COMPLETED   r1pl-hpcf-h02 
+7892991_17.exte+            2026-04-13T10:30:23 2026-04-13T10:30:34   00:00:11  00:00.001  COMPLETED   r1pl-hpcf-h02 
+Requested Resources: billing=8,cpu=8,mem=128G,node=1
+Maximum CPU Memory: 528.50M; 	CPU Efficiency: 11.36% of 00:01:28 core-walltime

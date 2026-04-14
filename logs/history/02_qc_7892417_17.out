@@ -1,0 +1,8 @@
+Job Statistics for 7892443:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+      7892417_17     xxw004 2026-04-12T17:01:58 2026-04-12T17:03:16   00:01:18  01:38.522     FAILED   r1pl-hpcf-h05 
+7892417_17.batch            2026-04-12T17:01:58 2026-04-12T17:03:16   00:01:18  01:38.520     FAILED   r1pl-hpcf-h05 
+7892417_17.exte+            2026-04-12T17:01:58 2026-04-12T17:03:16   00:01:18  00:00.001  COMPLETED   r1pl-hpcf-h05 
+Requested Resources: billing=8,cpu=8,mem=64G,node=1
+Maximum CPU Memory: 17543.38M; 	CPU Efficiency: 15.87% of 00:10:24 core-walltime

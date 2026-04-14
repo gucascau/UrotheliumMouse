@@ -1,0 +1,26 @@
+[1] "Creating artificial doublets for pN = 5%"
+[1] "Creating artificial doublets for pN = 10%"
+[1] "Creating artificial doublets for pN = 15%"
+[1] "Creating artificial doublets for pN = 20%"
+[1] "Creating artificial doublets for pN = 25%"
+[1] "Creating artificial doublets for pN = 30%"
+[1] "Creating Seurat object..."
+[1] "Creating Seurat object..."
+[1] "Creating Seurat object..."
+[1] "Creating Seurat object..."
+[1] "Creating Seurat object..."
+[1] "Running SCTransform..."
+[1] "Creating Seurat object..."
+[1] "Running SCTransform..."
+[1] "Running SCTransform..."
+[1] "Running SCTransform..."
+[1] "Running SCTransform..."
+[1] "Running SCTransform..."
+Job Statistics for 7892371:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+       7892366_1     xxw004 2026-04-12T10:27:08 2026-04-12T10:28:24   00:01:16  02:37.863     FAILED   r1pl-hpcf-h03 
+ 7892366_1.batch            2026-04-12T10:27:08 2026-04-12T10:28:24   00:01:16  02:37.862     FAILED   r1pl-hpcf-h03 
+7892366_1.extern            2026-04-12T10:27:08 2026-04-12T10:28:24   00:01:16  00:00.001  COMPLETED   r1pl-hpcf-h03 
+Requested Resources: billing=8,cpu=8,mem=64G,node=1
+Maximum CPU Memory: 27726.98M; 	CPU Efficiency: 25.99% of 00:10:08 core-walltime

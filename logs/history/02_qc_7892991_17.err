@@ -1,0 +1,28 @@
+Loading required package: SeuratObject
+Loading required package: sp
+
+Attaching package: ‘SeuratObject’
+
+The following objects are masked from ‘package:base’:
+
+    intersect, t
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+future plan: sequential | globals size limit: disabled
+SLURM array mode: processing sample index 17
+Array mode: processing KidneyUUO7
+
+=== QC + Doublet removal: KidneyUUO7 ===
+  Pre-processed dataset – skipping QC and DoubletFinder
+Done: KidneyUUO7
+Filtered objects saved in: /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/seurat_objects

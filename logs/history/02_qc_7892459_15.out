@@ -1,0 +1,11 @@
+[1] "Creating artificial doublets for pN = 5%"
+[1] "Creating Seurat object..."
+[1] "Running SCTransform..."
+Job Statistics for 7892478:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+      7892459_15     xxw004 2026-04-12T21:42:33 2026-04-12T21:44:41   00:02:08  03:05.055     FAILED   r1pl-hpcf-h02 
+7892459_15.batch            2026-04-12T21:42:33 2026-04-12T21:44:41   00:02:08  03:05.053     FAILED   r1pl-hpcf-h02 
+7892459_15.exte+            2026-04-12T21:42:33 2026-04-12T21:44:41   00:02:08  00:00.001  COMPLETED   r1pl-hpcf-h02 
+Requested Resources: billing=8,cpu=8,mem=64G,node=1
+Maximum CPU Memory: 17037.51M; 	CPU Efficiency: 18.07% of 00:17:04 core-walltime

@@ -1,0 +1,158 @@
+Loading required package: SeuratObject
+Loading required package: sp
+
+Attaching package: ‘SeuratObject’
+
+The following objects are masked from ‘package:base’:
+
+    intersect, t
+
+Loading required package: Rcpp
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: AnnotationDbi
+Loading required package: stats4
+Loading required package: BiocGenerics
+
+Attaching package: ‘BiocGenerics’
+
+The following objects are masked from ‘package:dplyr’:
+
+    combine, intersect, setdiff, union
+
+The following object is masked from ‘package:SeuratObject’:
+
+    intersect
+
+The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+The following objects are masked from ‘package:base’:
+
+    anyDuplicated, aperm, append, as.data.frame, basename, cbind,
+    colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,
+    get, grep, grepl, intersect, is.unsorted, lapply, Map, mapply,
+    match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,
+    Position, rank, rbind, Reduce, rownames, sapply, setdiff, table,
+    tapply, union, unique, unsplit, which.max, which.min
+
+Loading required package: Biobase
+Welcome to Bioconductor
+
+    Vignettes contain introductory material; view with
+    'browseVignettes()'. To cite Bioconductor, see
+    'citation("Biobase")', and for packages 'citation("pkgname")'.
+
+Loading required package: IRanges
+Loading required package: S4Vectors
+
+Attaching package: ‘S4Vectors’
+
+The following objects are masked from ‘package:dplyr’:
+
+    first, rename
+
+The following object is masked from ‘package:utils’:
+
+    findMatches
+
+The following objects are masked from ‘package:base’:
+
+    expand.grid, I, unname
+
+
+Attaching package: ‘IRanges’
+
+The following objects are masked from ‘package:dplyr’:
+
+    collapse, desc, slice
+
+The following object is masked from ‘package:sp’:
+
+    %over%
+
+
+Attaching package: ‘AnnotationDbi’
+
+The following object is masked from ‘package:dplyr’:
+
+    select
+
+
+Excluding: BladderHomogenate1, BladderHomogenate2
+Loading 21 QC-filtered datasets...
+  [1/21] ChenSpatial
+    Renaming assay 'originalexp' → 'RNA' for ChenSpatial
+Renaming default assay from originalexp to RNA
+    [Ensembl→Symbol] ChenSpatial: 31671 Ensembl IDs detected (of 31671 genes)
+    [Ensembl→Symbol] Coercing v4 Assay → Assay5
+Warning: Assay RNA changing from Assay to Assay5
+    [Ensembl→Symbol] 7450 genes unmapped — keeping original name
+    [Ensembl→Symbol] 23 duplicate symbols resolved, 36 genes dropped
+Warning: Different features in new layer data than already exists for data
+    [Ensembl→Symbol] Done: 31635 genes retained
+  [2/21] EmbryosE9_5ToE13_5
+  [3/21] KidneyE18_5_1
+  [4/21] KidneyHealthy1
+  [5/21] KidneyHealthy2
+  [6/21] KidneyHealthy3
+  [7/21] KidneyHealthy4
+  [8/21] KidneyHealthy5
+  [9/21] KidneyrUUO1
+  [10/21] KidneyTET2UUO
+  [11/21] KidneyUUO1
+  [12/21] KidneyUUO2
+  [13/21] KidneyUUO3
+  [14/21] KidneyUUO4
+  [15/21] KidneyUUO5
+  [16/21] KidneyUUO6
+  [17/21] KidneyUUO7
+  [18/21] KidneyUUO8
+  [19/21] KudoUUOUrothelium
+    [Ensembl→Symbol] KudoUUOUrothelium: 31 Ensembl IDs detected (of 27104 genes)
+    [Ensembl→Symbol] 27090 genes unmapped — keeping original name
+    [Ensembl→Symbol] 3 duplicate symbols resolved, 3 genes dropped
+Warning: Different features in new layer data than already exists for data
+Warning: Different features in new layer data than already exists for counts
+Warning: Different features in new layer data than already exists for scale.data.GOF.Kudo
+Warning: Different features in new layer data than already exists for scale.data.LOF.Kudo
+Warning: Different features in new layer data than already exists for scale.data.Vehicle.Kudo
+Warning: Different features in new layer data than already exists for scale.data.Yoda.Kudo
+Warning: Different features in new layer data than already exists for scale.data
+    [Ensembl→Symbol] Done: 27101 genes retained
+  [20/21] LakesnRNA
+    Renaming assay 'originalexp' → 'RNA' for LakesnRNA
+Renaming default assay from originalexp to RNA
+    [Ensembl→Symbol] LakesnRNA: 28564 Ensembl IDs detected (of 28564 genes)
+    [Ensembl→Symbol] Coercing v4 Assay → Assay5
+Warning: Assay RNA changing from Assay to Assay5
+    [Ensembl→Symbol] 6262 genes unmapped — keeping original name
+    [Ensembl→Symbol] 22 duplicate symbols resolved, 23 genes dropped
+Warning: Different features in new layer data than already exists for data
+    [Ensembl→Symbol] Done: 28541 genes retained
+  [21/21] MKA
+    Renaming assay 'originalexp' → 'RNA' for MKA
+Renaming default assay from originalexp to RNA
+    [Ensembl→Symbol] MKA: 16641 Ensembl IDs detected (of 16641 genes)
+    [Ensembl→Symbol] Coercing v4 Assay → Assay5
+Warning: Assay RNA changing from Assay to Assay5
+    [Ensembl→Symbol] 1797 genes unmapped — keeping original name
+    [Ensembl→Symbol] 5 duplicate symbols resolved, 5 genes dropped
+Warning: Different features in new layer data than already exists for data
+    [Ensembl→Symbol] Done: 16636 genes retained
+Warning messages:
+1: Key ‘originalexp_’ taken, using ‘rna_’ instead 
+2: Key ‘originalexp_’ taken, using ‘rna_’ instead 
+3: Key ‘originalexp_’ taken, using ‘rna_’ instead 
+Total cells loaded: 2,877,370
+Merging all objects (Seurat v5 layer-aware merge)...

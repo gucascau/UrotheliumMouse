@@ -1,0 +1,23 @@
+Submitted Step 1 (load):              job 7890306
+Submitted Step 2a (QC array 0-17,19-22): job 7890307 (depends on 7890306)
+Submitted Step 2b (QC sci_kidney):    job 7890308 (depends on 7890306)
+Submitted Step 2c (QC summary):       job 7890309 (depends on 7890307 + 7890308)
+Submitted Step 3 (integrate):         job 7890310 (depends on 7890309)
+
+Full pipeline submitted. Monitor with: squeue -u $USER
+Logs in: logs/
+
+Job IDs:
+  Step 1 (load):         7890306
+  Step 2a (QC array):    7890307
+  Step 2b (QC sci):      7890308
+  Step 2c (QC summary):  7890309
+  Step 3 (integrate):    7890310
+Job Statistics for 7890305:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+         7890305     xxw004 2026-04-10T18:11:33 2026-04-10T18:11:34   00:00:01  00:00.084  COMPLETED   r1pl-hpcf-h05 
+   7890305.batch            2026-04-10T18:11:33 2026-04-10T18:11:34   00:00:01  00:00.082  COMPLETED   r1pl-hpcf-h05 
+  7890305.extern            2026-04-10T18:11:33 2026-04-10T18:11:34   00:00:01  00:00.001  COMPLETED   r1pl-hpcf-h05 
+Requested Resources: billing=1,cpu=1,mem=4G,node=1
+Maximum CPU Memory: 2.23M; 	CPU Efficiency: 0.00% of 00:00:01 core-walltime

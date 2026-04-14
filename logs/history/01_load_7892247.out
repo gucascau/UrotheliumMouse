@@ -1,0 +1,56 @@
+          sample_id     gsm_id   technology species       tissue
+     KidneyHealthy1  GSE119531     Drop-seq   mouse       kidney
+         KidneyUUO1  GSE119531    snRNA-seq   mouse       kidney
+      KidneyE18_5_1  GSE108291       10X_v2   mouse kidney_E18.5
+     KidneyHealthy2 GSM4151577       10X_v2   mouse       kidney
+         KidneyUUO2 GSM4151578       10X_v2   mouse       kidney
+         KidneyUUO3 GSM4151579       10X_v2   mouse       kidney
+        KidneyrUUO1 GSM4151580       10X_v2   mouse       kidney
+     KidneyHealthy3 GSM5333084     10X_v3.1   mouse       kidney
+         KidneyUUO4 GSM5333085     10X_v3.1   mouse       kidney
+         KidneyUUO5 GSM5333086     10X_v3.1   mouse       kidney
+ BladderHomogenate1 GSM3723360       10X_v2   mouse      bladder
+ BladderHomogenate2 GSM3723361       10X_v2   mouse      bladder
+     KidneyHealthy4 GSM8417119    snRNA-seq   mouse       kidney
+     KidneyHealthy5 GSM8417120    snRNA-seq   mouse       kidney
+         KidneyUUO6 GSM8417121    snRNA-seq   mouse       kidney
+      KidneyTET2UUO GSM8417122    snRNA-seq   mouse       kidney
+         KidneyUUO7  GSE264184    scRNA-seq   mouse       kidney
+         KidneyUUO8  GSE264184    scRNA-seq   mouse       kidney
+ EmbryosE9_5ToE13_5  GSE119945 sci-RNA-seq3   mouse AllOrganoids
+  KudoUUOUrothelium    KUDORDS          10X   mouse       kidney
+                MKA     MKARDS         TODO   mouse       kidney
+        ChenSpatial    ChenRDS         TODO   mouse       kidney
+          LakesnRNA  LakesnRDS    snRNA-seq   mouse       kidney
+           condition                       paper has_annotation n_cells n_genes
+             Healthy               PMID_30510133           TRUE   11394   18537
+                 UUO               PMID_30510133           TRUE    6147   17023
+              Normal               PMID_31118232          FALSE   26018   18625
+                Sham PMID_32978267;PMID_36509292          FALSE    5540   14921
+            UUO_day2 PMID_32978267;PMID_36509292          FALSE    2679   16187
+            UUO_day7 PMID_32978267;PMID_36509292          FALSE    4501   17172
+                rUUO PMID_32978267;PMID_36509292          FALSE    3650   16991
+                Sham               PMID_39414946          FALSE   31901   25118
+          UUO_10days               PMID_39414946          FALSE   13306   28106
+          UUO_10days               PMID_39414946          FALSE   14777   28119
+  Bladder_Homogenate               PMID_31462402          FALSE    7320   16744
+  Bladder_Homogenate               PMID_31462402          FALSE    7411   17003
+                Sham               PMID_39511169          FALSE    7843   20280
+                Sham               PMID_39511169          FALSE   12261   23243
+           UUO_4days               PMID_39511169          FALSE   19987   24312
+    TET2KO_UUO_4days               PMID_39511169          FALSE   19896   22643
+          UUO_10days               PMID_35941120          FALSE    6509   17939
+          UUO_10days               PMID_35941120          FALSE    8050   18455
+         Development               PMID_30787437           TRUE 1869386   26182
+ Urothelium_Organoid                  Kudo_et_al           TRUE  190338   27104
+             Atlas_1 PMID_37275529;PMID_41071604           TRUE  141401   16641
+             Atlas_2               PMID_40259083           TRUE  203139   31671
+             Atlas_3               PMID_41040183           TRUE  315764   28564
+Job Statistics for 7892247:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+         7892247     xxw004 2026-04-11T22:47:38 2026-04-12T00:36:21   01:48:43   01:48:03  COMPLETED   r1pl-hpcf-h01 
+   7892247.batch            2026-04-11T22:47:38 2026-04-12T00:36:21   01:48:43   01:48:03  COMPLETED   r1pl-hpcf-h01 
+  7892247.extern            2026-04-11T22:47:38 2026-04-12T00:36:21   01:48:43  00:00.001  COMPLETED   r1pl-hpcf-h01 
+Requested Resources: billing=8,cpu=8,mem=256G,node=1
+Maximum CPU Memory: 175180.87M; 	CPU Efficiency: 12.43% of 14:29:44 core-walltime

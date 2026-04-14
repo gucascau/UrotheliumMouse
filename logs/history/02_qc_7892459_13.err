@@ -1,0 +1,435 @@
+Loading required package: SeuratObject
+Loading required package: sp
+
+Attaching package: ‘SeuratObject’
+
+The following objects are masked from ‘package:base’:
+
+    intersect, t
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Using 8 parallel workers
+SLURM array mode: processing sample index 13
+Array mode: processing KidneyUUO2
+
+=== QC + Doublet removal: KidneyUUO2 ===
+  Before QC: 2679 cells
+Warning: Default search for "data" layer in "RNA" assay yielded no results; utilizing "counts" layer instead.
+  After QC thresholds: 2087 cells (removed 592)
+  Preprocessing for DoubletFinder (SCTransform + PCA + UMAP)...
+Warning: The default method for RunUMAP has changed from calling Python UMAP via reticulate to the R-native UWOT using the cosine metric
+To use Python UMAP via reticulate, set umap.method to 'umap-learn' and metric to 'correlation'
+This message will be shown once per session
+    DoubletFinder: 2087 cells, expected doublet rate = 1.7%
+Loading required package: fields
+Loading required package: spam
+Spam version 2.11-3 (2026-01-05) is loaded.
+Type 'help( Spam)' or 'demo( spam)' for a short introduction 
+and overview of this package.
+Help for individual functions is also obtained by adding the
+suffix '.spam' to the function name, e.g. 'help( chol.spam)'.
+
+Attaching package: ‘spam’
+
+The following object is masked from ‘package:Matrix’:
+
+    det
+
+The following objects are masked from ‘package:base’:
+
+    backsolve, forwardsolve
+
+Loading required package: viridisLite
+Loading required package: RColorBrewer
+
+Try help(fields) to get started.
+Loading required package: parallel
+Loading required package: sctransform
+Running SCTransform on assay: RNA
+vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
+Calculating cell attributes from input UMI matrix: log_umi
+Variance stabilizing transformation of count matrix of size 15389 by 2197
+Model formula is y ~ log_umi
+Get Negative Binomial regression parameters per gene
+Using 2000 genes, 2197 cells
+Found 41 outliers - those will be ignored in fitting/regularization step
+
+Second step: Get residuals using fitted parameters for 15389 genes
+Computing corrected count matrix for 15389 genes
+Calculating gene attributes
+Wall clock passed: Time difference of 11.33925 secs
+Determine variable features
+Centering data matrix
+Place corrected count matrix in counts slot
+Set default assay to SCT
+PC_ 1 
+Positive:  Gpx3, Spink1, Fxyd2, mt-Nd2, Aldob, Guca2b, Dbi, Atp1b1, Cd63, Slc34a1 
+	   mt-Nd3, Ldhb, Ndrg1, Pdzk1ip1, Tmem27, Slc13a1, Miox, Slc27a2, Hrsp12, Chchd10 
+	   Wfdc2, Akr1c21, Spp1, Clu, mt-Nd4, Igfbp7, Acsm2, Keg1, Car2, Ugt2b38 
+Negative:  Tmsb4x, Fcer1g, Cd52, Ctss, Lyz2, Tyrobp, Actb, Cd74, Tgfbi, Coro1a 
+	   Crip1, Alox5ap, Ifitm3, Ctsc, H2-Aa, Ms4a6c, Wfdc17, Ccr2, Tmsb10, S100a4 
+	   H2-Ab1, B2m, Vim, S100a6, H2-Eb1, C1qb, Fxyd5, Laptm5, Ccl9, Cotl1 
+PC_ 2 
+Positive:  Gpx3, Spink1, Aldob, Guca2b, Dbi, Slc34a1, Miox, Akr1c21, Slc13a1, Slc27a2 
+	   Tmem27, Acsm2, Keg1, Ftl1, Gpx1, Ugt2b38, Hrsp12, Ass1, Gatm, Slc4a4 
+	   Glyat, Kap, Fbp1, Pck1, Lrp2, Pdzk1, Cyp2j5, Ndrg1, Ttc36, Lgmn 
+Negative:  Ly6a, Sparc, Ly6c1, Tm4sf1, Crip2, Egfl7, Emcn, Meis2, Slc9a3r2, Esam 
+	   Clu, Cd200, Plpp1, Cd34, Klf2, Gng11, Pecam1, Prkcdbp, Ecscr, Flt1 
+	   Cd24a, Eng, Ctla2a, Cdh5, Ramp2, Gimap6, Tspan8, Defb1, Tsc22d1, Plat 
+PC_ 3 
+Positive:  Clu, Defb1, Wfdc2, Atp1b1, Umod, Lcn2, Tmem213, Ldhb, Mt1, Epcam 
+	   Cd24a, Spp1, Atp1a1, Mal, Krt7, Tfcp2l1, Sostdc1, Kng2, Mt2, Slc12a1 
+	   Clcnkb, Wfdc15b, Ctsd, Klk1, Ppp1r1a, Atp6v1g3, Atp6v0d2, Plet1, Cldn7, Pcolce 
+Negative:  Sparc, Spink1, Tm4sf1, Emcn, Gpx3, Egfl7, Meis2, Aldob, Slc9a3r2, Esam 
+	   Timp3, Cd34, Klf2, Plpp1, Ly6c1, Pecam1, Flt1, Ecscr, Cd200, Ramp2 
+	   Eng, Cyp4b1, Ctla2a, Cdh5, Gng11, Gimap6, Prkcdbp, Ifitm3, Slc34a1, Fabp4 
+PC_ 4 
+Positive:  Lyz2, Apoe, Ctsc, Ctss, Tgfbi, Fcer1g, Ifitm3, C1qb, C5ar1, Cebpb 
+	   Fcgr3, Ccl9, Ccl6, C1qa, Tyrobp, C1qc, Ms4a6c, Ftl1, Chil3, Ms4a6d 
+	   Fn1, Cxcl2, Alox5ap, Ccl2, Csf1r, Wfdc17, Aif1, Lst1, Sirpb1c, Lgmn 
+Negative:  Ms4a4b, Ptprcap, AW112010, Nkg7, Trbc2, Tmsb10, Ltb, Cd3g, Lck, Cd3d 
+	   Ccl5, Trac, Sept1, Thy1, Rps27, Ctsw, Cd2, H2-Q7, Rac2, Rpl13a 
+	   Cd3e, Gimap3, Hcst, Lat, Gimap4, Tbc1d10c, Skap1, Klrd1, Il2rb, Trbc1 
+PC_ 5 
+Positive:  Umod, Lcn2, Mt1, Slc12a1, Sostdc1, Ly6a, Ppp1r1a, Mt2, Wfdc2, Fxyd2 
+	   Wfdc15b, Tsc22d1, Stmn1, Cldn19, Kng2, Egf, C1qa, C1qb, C1qc, Pth1r 
+	   Tuba1b, Ckb, Tubb5, 2810417H13Rik, Mrps6, Tspan8, Atp1a1, Tfap2b, Top2a, Birc5 
+Negative:  Atp6v1g3, Pam, Spink8, Atp6v0d2, Serpinb9, Plac8, Guca2a, Foxi1, Atp6v1b1, Rhbg 
+	   Atp6v1c2, Serpinb6b, Car2, Ociad2, Car12, Hepacam2, Plet1, S100g, Rhcg, Slc26a4 
+	   Slc4a9, Avpr1a, Tfcp2l1, Ckmt1, Atp6v1a, Tmem213, Adgrf5, Rnf152, Pdzk1ip1, Atp6v0a4 
+Running SCTransform on assay: RNA
+vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
+Calculating cell attributes from input UMI matrix: log_umi
+Variance stabilizing transformation of count matrix of size 15549 by 2319
+Model formula is y ~ log_umi
+Get Negative Binomial regression parameters per gene
+Using 2000 genes, 2319 cells
+Found 19 outliers - those will be ignored in fitting/regularization step
+
+Second step: Get residuals using fitted parameters for 15549 genes
+Computing corrected count matrix for 15549 genes
+Calculating gene attributes
+Wall clock passed: Time difference of 11.51313 secs
+Determine variable features
+Centering data matrix
+Place corrected count matrix in counts slot
+Set default assay to SCT
+PC_ 1 
+Positive:  Gpx3, Spink1, Fxyd2, Aldob, mt-Nd2, Guca2b, Dbi, Cd63, Slc34a1, Atp1b1 
+	   mt-Nd3, Ldhb, Ndrg1, Pdzk1ip1, Slc13a1, Tmem27, Miox, Hrsp12, Chchd10, Slc27a2 
+	   Akr1c21, Igfbp7, Spp1, Clu, Wfdc2, mt-Nd4, Acsm2, Keg1, Car2, Ugt2b38 
+Negative:  Tmsb4x, Fcer1g, Cd52, Lyz2, Ctss, Tyrobp, Actb, Cd74, Tgfbi, Coro1a 
+	   Crip1, Ifitm3, Alox5ap, H2-Aa, Ctsc, Wfdc17, Ms4a6c, H2-Ab1, Tmsb10, H2-Eb1 
+	   Ccr2, C1qb, S100a4, Vim, S100a6, B2m, Fxyd5, Ccl9, Laptm5, Arpc1b 
+PC_ 2 
+Positive:  Ly6a, Sparc, Ly6c1, Tm4sf1, Emcn, Egfl7, Crip2, Meis2, Slc9a3r2, Clu 
+	   Esam, Cd200, Plpp1, Cd34, Gng11, Klf2, Pecam1, Prkcdbp, Ecscr, Flt1 
+	   Cd24a, Eng, Ramp2, Ctla2a, Defb1, Plat, Gimap6, Cdh5, Tsc22d1, Tspan8 
+Negative:  Spink1, Gpx3, Aldob, Guca2b, Slc34a1, Dbi, Miox, Akr1c21, Slc13a1, Slc27a2 
+	   Tmem27, Acsm2, Keg1, Gpx1, Kap, Ftl1, Ugt2b38, Ass1, Hrsp12, Gatm 
+	   Slc4a4, Fbp1, Glyat, Pck1, Lrp2, Pdzk1, Ndrg1, Cyp2j5, Ttc36, Lgmn 
+PC_ 3 
+Positive:  Spink1, Sparc, Tm4sf1, Gpx3, Emcn, Egfl7, Meis2, Aldob, Slc9a3r2, Esam 
+	   Ly6c1, Timp3, Klf2, Plpp1, Cd34, Pecam1, Flt1, Cd200, Ecscr, Ramp2 
+	   Eng, Cyp4b1, Ctla2a, Gng11, Fabp4, Slc34a1, Gimap6, Cdh5, Ifitm3, Prkcdbp 
+Negative:  Clu, Defb1, Wfdc2, Atp1b1, Umod, Lcn2, Tmem213, Ldhb, Mt1, Cd24a 
+	   Epcam, Atp1a1, Spp1, Mal, Sostdc1, Tfcp2l1, Krt7, Mt2, Slc12a1, Kng2 
+	   Ctsd, Klk1, Atp6v1g3, Wfdc15b, Clcnkb, Ppp1r1a, Atp6v0d2, Spink8, Cdh16, Plet1 
+PC_ 4 
+Positive:  Lyz2, Apoe, Ctsc, Tgfbi, Ctss, Fcer1g, Ifitm3, Cebpb, C1qb, C5ar1 
+	   Ccl6, Ccl9, Fcgr3, Tyrobp, C1qa, C1qc, Chil3, Ms4a6c, Ftl1, Fn1 
+	   Cxcl2, Ms4a6d, Wfdc17, Alox5ap, Ccl2, Sirpb1c, Fos, Lst1, Cd14, Lgmn 
+Negative:  Ms4a4b, Ptprcap, Nkg7, AW112010, Trbc2, Tmsb10, Ltb, Cd3g, Lck, Cd3d 
+	   Ccl5, Trac, Sept1, Thy1, Rps27, Ctsw, H2-Q7, Rac2, Cd2, Rpl13a 
+	   Hcst, Cd3e, Gimap3, Lat, Gimap4, Tbc1d10c, Klrk1, Skap1, Klrd1, Il2rb 
+PC_ 5 
+Positive:  C1qb, Stmn1, C1qa, C1qc, Tuba1b, Tubb5, 2810417H13Rik, Top2a, Birc5, Hmgb2 
+	   Hist1h2ap, Ckb, Cd74, Cd72, Mgl2, H2-Eb1, Rrm2, Mki67, H2-Aa, Cks1b 
+	   H2afz, Tk1, Slamf9, Cx3cr1, Smc4, Ptma, Mt1, H2-Ab1, Hmgn2, Nusap1 
+Negative:  Plac8, Ifitm3, Hp, Cebpb, Ifitm6, Wfdc17, Sirpb1c, Msrb1, Atp6v1g3, Lyz2 
+	   Chil3, Ly6c2, Tyrobp, Ifitm2, Alox5ap, F13a1, Gm9733, Tmsb10, Ccl6, S100a6 
+	   Ms4a4c, Atp6v0d2, Pam, Spink8, Srgn, Smpdl3a, Sirpb1b, F10, Fos, Serpinb9 
+Running SCTransform on assay: RNA
+vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
+Calculating cell attributes from input UMI matrix: log_umi
+Variance stabilizing transformation of count matrix of size 15695 by 2455
+Model formula is y ~ log_umi
+Get Negative Binomial regression parameters per gene
+Using 2000 genes, 2455 cells
+Found 23 outliers - those will be ignored in fitting/regularization step
+
+Second step: Get residuals using fitted parameters for 15695 genes
+Computing corrected count matrix for 15695 genes
+Calculating gene attributes
+Wall clock passed: Time difference of 12.53036 secs
+Determine variable features
+Centering data matrix
+Place corrected count matrix in counts slot
+Set default assay to SCT
+PC_ 1 
+Positive:  Tmsb4x, Fcer1g, Lyz2, Cd52, Ctss, Actb, Cd74, Tyrobp, Tgfbi, Crip1 
+	   H2-Aa, Coro1a, Ifitm3, Alox5ap, Ctsc, H2-Ab1, Wfdc17, H2-Eb1, C1qb, Ms4a6c 
+	   Tmsb10, Vim, B2m, S100a4, Ccr2, S100a6, Fxyd5, Actg1, Arpc1b, Ccl9 
+Negative:  Gpx3, Spink1, Fxyd2, mt-Nd2, Aldob, Guca2b, Dbi, Slc34a1, Cd63, Atp1b1 
+	   mt-Nd3, Ndrg1, Ldhb, Pdzk1ip1, Tmem27, mt-Nd4, Miox, Slc13a1, Spp1, Clu 
+	   Hrsp12, Akr1c21, Chchd10, Slc27a2, Wfdc2, Igfbp7, Acsm2, Keg1, Kap, Ttc36 
+PC_ 2 
+Positive:  Ly6a, Sparc, Ly6c1, Tm4sf1, Emcn, Egfl7, Meis2, Crip2, Slc9a3r2, Clu 
+	   Esam, Plpp1, Cd200, Cd34, Klf2, Gng11, Prkcdbp, Pecam1, Ecscr, Ctla2a 
+	   Flt1, Eng, Plat, Cd24a, Ramp2, Defb1, Gimap6, Cdh5, Id3, Tspan8 
+Negative:  Gpx3, Spink1, Aldob, Guca2b, Dbi, Slc34a1, Miox, Akr1c21, Slc13a1, Slc27a2 
+	   Tmem27, Acsm2, Ftl1, Keg1, Kap, Gpx1, Ugt2b38, Ass1, Hrsp12, Gatm 
+	   Slc4a4, Glyat, Pck1, Fbp1, Lrp2, Ndrg1, Pdzk1, Lgmn, Lyz2, Cyp2j5 
+PC_ 3 
+Positive:  Spink1, Sparc, Gpx3, Tm4sf1, Emcn, Egfl7, Aldob, Meis2, Slc9a3r2, Plpp1 
+	   Ly6c1, Timp3, Esam, Klf2, Cd34, Pecam1, Flt1, Cd200, Cyp4b1, Ecscr 
+	   Slc34a1, Eng, Fabp4, Ramp2, Ctla2a, Gng11, Ifitm3, Gimap6, Igfbp5, Plat 
+Negative:  Clu, Defb1, Wfdc2, Umod, Atp1b1, Lcn2, Mt1, Tmem213, Ldhb, Cd24a 
+	   Epcam, Spp1, Atp1a1, Sostdc1, Mal, Mt2, Slc12a1, Tfcp2l1, Kng2, Krt7 
+	   Klk1, Ctsd, Atp6v1g3, Wfdc15b, Ppp1r1a, Clcnkb, Atp6v0d2, Spink8, S100g, S100a1 
+PC_ 4 
+Positive:  Ms4a4b, Nkg7, Ptprcap, Trbc2, AW112010, Ltb, Cd3g, Tmsb10, Cd3d, Lck 
+	   Ccl5, Trac, Thy1, Rps27, Sept1, Ctsw, Rac2, Cd2, Rpl13a, H2-Q7 
+	   Cd3e, Lat, Gimap3, Hcst, Gimap4, Tbc1d10c, Trbc1, Klrd1, Klrk1, Skap1 
+Negative:  Lyz2, Apoe, Ctsc, Fcer1g, Ctss, Tgfbi, Ifitm3, Cebpb, C1qb, C5ar1 
+	   Ccl6, Ccl9, Tyrobp, C1qa, Fcgr3, C1qc, Chil3, Ftl1, Cxcl2, Ms4a6c 
+	   Fn1, Wfdc17, Ccl2, Ms4a6d, Alox5ap, Fos, Sirpb1c, Cd14, Lgmn, Lst1 
+PC_ 5 
+Positive:  Plac8, Cebpb, Hp, Ifitm3, Ifitm6, Wfdc17, Atp6v1g3, Lyz2, Chil3, Msrb1 
+	   Sirpb1c, Tyrobp, Ly6c2, Ifitm2, Alox5ap, Tmsb10, Ccl6, Fos, Spink8, Pam 
+	   F13a1, Gm9733, S100a6, Atp6v0d2, Srgn, Serpinb9, Smpdl3a, Ms4a4c, Guca2a, Sirpb1b 
+Negative:  C1qb, C1qa, Stmn1, C1qc, Tuba1b, Tubb5, 2810417H13Rik, Cd74, Top2a, Hmgb2 
+	   Hist1h2ap, Ckb, Birc5, H2-Eb1, H2-Aa, Cd72, Mgl2, Umod, H2-Ab1, Mt1 
+	   H2afz, Slc12a1, Rrm2, Mki67, Cks1b, Ptma, Slamf9, Sostdc1, Cx3cr1, Mt2 
+Running SCTransform on assay: RNA
+vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
+Calculating cell attributes from input UMI matrix: log_umi
+Variance stabilizing transformation of count matrix of size 15808 by 2609
+Model formula is y ~ log_umi
+Get Negative Binomial regression parameters per gene
+Using 2000 genes, 2609 cells
+Found 26 outliers - those will be ignored in fitting/regularization step
+
+Second step: Get residuals using fitted parameters for 15808 genes
+Computing corrected count matrix for 15808 genes
+Calculating gene attributes
+Wall clock passed: Time difference of 12.57811 secs
+Determine variable features
+Centering data matrix
+Place corrected count matrix in counts slot
+Set default assay to SCT
+PC_ 1 
+Positive:  Tmsb4x, Lyz2, Fcer1g, Cd52, Ctss, Actb, Cd74, Tyrobp, Tgfbi, H2-Aa 
+	   Crip1, Coro1a, H2-Ab1, Ifitm3, C1qb, H2-Eb1, Ctsc, Alox5ap, Wfdc17, Ms4a6c 
+	   Tmsb10, B2m, Ccr2, S100a4, S100a6, Vim, Apoe, Ccl9, C1qa, Actg1 
+Negative:  Gpx3, Spink1, Fxyd2, mt-Nd2, Aldob, Guca2b, Dbi, Atp1b1, Slc34a1, Cd63 
+	   mt-Nd3, Ldhb, Clu, Pdzk1ip1, Spp1, Ndrg1, mt-Nd4, Slc13a1, Miox, Tmem27 
+	   Wfdc2, Chchd10, Slc27a2, Akr1c21, Igfbp7, Hrsp12, Acsm2, Keg1, Defb1, Umod 
+PC_ 2 
+Positive:  Gpx3, Spink1, Aldob, Guca2b, Slc34a1, Dbi, Miox, Akr1c21, Slc13a1, Slc27a2 
+	   Acsm2, Tmem27, Kap, Ftl1, Keg1, Gpx1, Ugt2b38, Ass1, Gatm, Hrsp12 
+	   Slc4a4, Pck1, Glyat, Fbp1, Lrp2, Lyz2, Pdzk1, Ndrg1, Cyp2j5, Ttc36 
+Negative:  Sparc, Ly6a, Ly6c1, Tm4sf1, Emcn, Egfl7, Meis2, Crip2, Esam, Slc9a3r2 
+	   Clu, Plpp1, Cd200, Cd34, Klf2, Gng11, Prkcdbp, Pecam1, Ecscr, Flt1 
+	   Ctla2a, Eng, Plat, Fabp4, Ramp2, Tsc22d1, Cd24a, Defb1, Gimap6, Cdh5 
+PC_ 3 
+Positive:  Spink1, Sparc, Gpx3, Tm4sf1, Emcn, Egfl7, Aldob, Meis2, Slc9a3r2, Ly6c1 
+	   Esam, Plpp1, Klf2, Timp3, Cd34, Cd200, Pecam1, Ecscr, Fabp4, Flt1 
+	   Eng, Cyp4b1, Ctla2a, Slc34a1, Ramp2, Gng11, Prkcdbp, Igfbp5, Ifitm3, Plat 
+Negative:  Clu, Defb1, Umod, Wfdc2, Lcn2, Atp1b1, Tmem213, Mt1, Ldhb, Cd24a 
+	   Epcam, Spp1, Atp1a1, Slc12a1, Sostdc1, Mt2, Mal, Klk1, Tfcp2l1, Krt7 
+	   Wfdc15b, Kng2, Atp6v1g3, Ctsd, Ppp1r1a, Clcnkb, Spink8, Atp6v0d2, Pcolce, S100a1 
+PC_ 4 
+Positive:  Ms4a4b, Nkg7, Trbc2, AW112010, Ptprcap, Ltb, Tmsb10, Cd3g, Ccl5, Cd3d 
+	   Lck, Trac, Thy1, Rps27, Sept1, Ctsw, Rac2, Rpl13a, Cd2, H2-Q7 
+	   Lat, Cd3e, Hcst, Gimap3, Gimap4, Trbc1, Klrk1, Tbc1d10c, Klrd1, Il2rb 
+Negative:  Lyz2, Apoe, Ctsc, Fcer1g, C1qb, Ctss, Tgfbi, C5ar1, Ifitm3, Ccl6 
+	   Cebpb, C1qa, Ccl9, C1qc, Fcgr3, Tyrobp, Chil3, Ftl1, Cxcl2, Ccl2 
+	   Ms4a6c, Fn1, Ms4a6d, Wfdc17, Alox5ap, Cd14, Fos, Lgmn, Sirpb1c, Aif1 
+PC_ 5 
+Positive:  C1qb, C1qa, Cd74, Stmn1, C1qc, Tuba1b, H2-Aa, H2-Eb1, H2-Ab1, Tubb5 
+	   2810417H13Rik, Ckb, Hmgb2, Top2a, Hist1h2ap, Birc5, Mgl2, Umod, Cd72, Mt1 
+	   Slc12a1, H2afz, Cks1b, Sostdc1, Ptma, Slamf9, Ppp1r1a, Mt2, Mki67, Rrm2 
+Negative:  Plac8, Cebpb, Hp, Ifitm3, Lyz2, Wfdc17, Ifitm6, Atp6v1g3, Chil3, Sirpb1c 
+	   Ly6c2, Tyrobp, Msrb1, Ccl6, Ifitm2, Fos, F13a1, Pam, Alox5ap, Spink8 
+	   Atp6v0d2, Serpinb9, Tmsb10, S100a6, Gm9733, Srgn, Smpdl3a, Guca2a, Btg1, Sirpb1b 
+Running SCTransform on assay: RNA
+vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
+Calculating cell attributes from input UMI matrix: log_umi
+Variance stabilizing transformation of count matrix of size 15910 by 2783
+Model formula is y ~ log_umi
+Get Negative Binomial regression parameters per gene
+Using 2000 genes, 2783 cells
+Found 18 outliers - those will be ignored in fitting/regularization step
+
+Second step: Get residuals using fitted parameters for 15910 genes
+Computing corrected count matrix for 15910 genes
+Calculating gene attributes
+Wall clock passed: Time difference of 12.18362 secs
+Determine variable features
+Centering data matrix
+Place corrected count matrix in counts slot
+Set default assay to SCT
+PC_ 1 
+Positive:  Gpx3, Spink1, Fxyd2, mt-Nd2, Aldob, Guca2b, Dbi, Slc34a1, Cd63, mt-Nd3 
+	   Atp1b1, Clu, Slc13a1, mt-Nd4, Ldhb, Spp1, Miox, Ndrg1, Tmem27, Slc27a2 
+	   Pdzk1ip1, Akr1c21, Hrsp12, Wfdc2, Chchd10, Acsm2, Kap, Igfbp7, Keg1, Umod 
+Negative:  Tmsb4x, Lyz2, Fcer1g, Cd74, Actb, Cd52, Ctss, Tyrobp, H2-Aa, Tgfbi 
+	   H2-Ab1, Crip1, H2-Eb1, Ifitm3, C1qb, Coro1a, Alox5ap, Ctsc, Wfdc17, Ms4a6c 
+	   Tmsb10, B2m, Ccr2, Apoe, S100a4, Actg1, C1qa, Ccl9, Vim, S100a6 
+PC_ 2 
+Positive:  Sparc, Tm4sf1, Ly6c1, Ly6a, Emcn, Egfl7, Crip2, Meis2, Slc9a3r2, Clu 
+	   Esam, Plpp1, Cd200, Klf2, Cd34, Gng11, Prkcdbp, Ctla2a, Plat, Pecam1 
+	   Ecscr, Fabp4, Eng, Flt1, Defb1, Ramp2, Cd24a, Tspan8, Nrp1, Serpine2 
+Negative:  Gpx3, Spink1, Aldob, Guca2b, Dbi, Slc34a1, Akr1c21, Miox, Slc13a1, Slc27a2 
+	   Tmem27, Acsm2, Kap, Ftl1, Keg1, Gpx1, Ugt2b38, Ass1, Slc4a4, Gatm 
+	   Hrsp12, Pck1, Glyat, Fbp1, Lyz2, Lrp2, Pdzk1, Cyp2j5, Cd74, Ttc36 
+PC_ 3 
+Positive:  Spink1, Sparc, Gpx3, Tm4sf1, Emcn, Egfl7, Aldob, Meis2, Plpp1, Ly6c1 
+	   Slc9a3r2, Klf2, Esam, Cd34, Timp3, Cd200, Fabp4, Cyp4b1, Pecam1, Slc34a1 
+	   Ctla2a, Igfbp5, Flt1, Eng, Ecscr, Ramp2, Gng11, Plat, Ifitm3, Prkcdbp 
+Negative:  Clu, Defb1, Umod, Lcn2, Wfdc2, Atp1b1, Mt1, Tmem213, Ldhb, Cd24a 
+	   Spp1, Epcam, Sostdc1, Slc12a1, Mt2, Atp1a1, Klk1, Wfdc15b, Mal, Kng2 
+	   Atp6v1g3, Tfcp2l1, Krt7, Ppp1r1a, Ctsd, S100g, Spink8, Clcnkb, Pcolce, Atp6v0d2 
+PC_ 4 
+Positive:  Lyz2, Apoe, C1qb, Ctsc, Fcer1g, Ctss, Tgfbi, C5ar1, Ifitm3, Ccl6 
+	   Cebpb, C1qa, C1qc, Ccl9, Chil3, Cxcl2, Fcgr3, Ftl1, Tyrobp, Ccl2 
+	   Ms4a6c, Fn1, Ms4a6d, Wfdc17, Fos, Pf4, Cd14, Aif1, Alox5ap, Sirpb1c 
+Negative:  Ms4a4b, Nkg7, AW112010, Trbc2, Ccl5, Ptprcap, Tmsb10, Ltb, Cd3g, Cd3d 
+	   Lck, Trac, Thy1, Rps27, Sept1, Ctsw, Rpl13a, Rac2, H2-Q7, Hcst 
+	   Cd2, Cd3e, Lat, Gimap3, Gimap4, Trbc1, Klrk1, Klrd1, Cd52, Il2rb 
+PC_ 5 
+Positive:  Cd74, H2-Aa, H2-Eb1, H2-Ab1, Stmn1, C1qa, C1qb, Tuba1b, C1qc, Tubb5 
+	   2810417H13Rik, Ckb, Mgl2, Hist1h2ap, Hmgb2, Top2a, Birc5, Cd72, H2-DMb1, H2-DMa 
+	   H2afz, Slamf9, Cst3, Ptma, Cks1b, Smc4, Actb, Cfp, Hmgn2, Mki67 
+Negative:  Plac8, Cebpb, Lyz2, Hp, Chil3, Wfdc17, Ifitm6, Ifitm3, Ly6c2, Sirpb1c 
+	   Tyrobp, Ccl6, Msrb1, Fos, F13a1, Ifitm2, Fn1, Srgn, Tmsb10, Alox5ap 
+	   Gsr, Gm9733, Ms4a6c, Junb, Sirpb1b, Clec4e, Btg1, Smpdl3a, S100a6, F10 
+Running SCTransform on assay: RNA
+vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
+Calculating cell attributes from input UMI matrix: log_umi
+Variance stabilizing transformation of count matrix of size 15986 by 2981
+Model formula is y ~ log_umi
+Get Negative Binomial regression parameters per gene
+Using 2000 genes, 2981 cells
+Found 21 outliers - those will be ignored in fitting/regularization step
+
+Second step: Get residuals using fitted parameters for 15986 genes
+Computing corrected count matrix for 15986 genes
+Calculating gene attributes
+Wall clock passed: Time difference of 13.30238 secs
+Determine variable features
+Centering data matrix
+Place corrected count matrix in counts slot
+Set default assay to SCT
+PC_ 1 
+Positive:  Gpx3, Spink1, Fxyd2, mt-Nd2, Aldob, Guca2b, Dbi, Slc34a1, Cd63, Atp1b1 
+	   mt-Nd3, Clu, Ldhb, Slc13a1, Spp1, Ndrg1, mt-Nd4, Miox, Tmem27, Pdzk1ip1 
+	   Akr1c21, Slc27a2, Hrsp12, Wfdc2, Chchd10, Kap, Umod, Acsm2, Igfbp7, Keg1 
+Negative:  Tmsb4x, Lyz2, Cd74, Fcer1g, Ctss, Cd52, Actb, Tyrobp, H2-Aa, H2-Ab1 
+	   Tgfbi, H2-Eb1, C1qb, Crip1, Ifitm3, Coro1a, Ctsc, Alox5ap, Wfdc17, C1qa 
+	   Ms4a6c, Tmsb10, Apoe, B2m, Ccr2, S100a4, Vim, Ccl9, C1qc, S100a6 
+PC_ 2 
+Positive:  Sparc, Tm4sf1, Ly6c1, Ly6a, Emcn, Egfl7, Meis2, Crip2, Clu, Plpp1 
+	   Slc9a3r2, Esam, Klf2, Cd200, Cd34, Gng11, Ctla2a, Plat, Fabp4, Prkcdbp 
+	   Ecscr, Pecam1, Eng, Flt1, Igfbp5, Serpine2, Defb1, Ramp2, Id3, Cd24a 
+Negative:  Gpx3, Spink1, Aldob, Guca2b, Slc34a1, Dbi, Miox, Akr1c21, Slc13a1, Kap 
+	   Slc27a2, Tmem27, Acsm2, Ftl1, Keg1, Ugt2b38, Gpx1, Ass1, Hrsp12, Gatm 
+	   Slc4a4, Pck1, Glyat, Lyz2, Cd74, Fbp1, Lrp2, Ndrg1, Pdzk1, Cyp2j5 
+PC_ 3 
+Positive:  Spink1, Gpx3, Sparc, Tm4sf1, Emcn, Aldob, Egfl7, Meis2, Ly6c1, Plpp1 
+	   Klf2, Slc9a3r2, Timp3, Esam, Cd34, Slc34a1, Cyp4b1, Ctla2a, Fabp4, Cd200 
+	   Eng, Igfbp5, Flt1, Ecscr, Pecam1, Plat, Ramp2, Gng11, Guca2b, Gimap6 
+Negative:  Clu, Defb1, Umod, Lcn2, Wfdc2, Atp1b1, Mt1, Tmem213, Ldhb, Cd24a 
+	   Spp1, Slc12a1, Atp6v1g3, Sostdc1, Klk1, Mt2, Atp1a1, Epcam, Wfdc15b, Mal 
+	   Kng2, Ppp1r1a, Tfcp2l1, S100g, Krt7, Ctsd, Spink8, Clcnkb, Pcolce, Atp6v0d2 
+PC_ 4 
+Positive:  Ms4a4b, Nkg7, Ccl5, Trbc2, AW112010, Cd3g, Ltb, Tmsb10, Ptprcap, Cd3d 
+	   Lck, Trac, Thy1, Rps27, Rac2, Ctsw, Sept1, H2-Q7, Rpl13a, Cd2 
+	   Cd3e, Hcst, Lat, Gimap3, Trbc1, Gimap4, Klrk1, Cd8b1, Klrd1, Cd52 
+Negative:  Lyz2, Apoe, C1qb, Ctsc, Fcer1g, Ctss, Ccl6, Tgfbi, C1qa, Cebpb 
+	   C5ar1, Ifitm3, C1qc, Ccl9, Chil3, Cxcl2, Fcgr3, Ftl1, Ccl2, Tyrobp 
+	   Ms4a6c, Fn1, Wfdc17, Ms4a6d, Fos, Cd14, Pf4, Alox5ap, Ctsb, Lgmn 
+PC_ 5 
+Positive:  Cd74, H2-Aa, H2-Eb1, H2-Ab1, Stmn1, C1qa, Tuba1b, C1qb, C1qc, Tubb5 
+	   2810417H13Rik, Ckb, Mgl2, H2-DMb1, H2-DMa, Hist1h2ap, Hmgb2, Cst3, Top2a, Birc5 
+	   Cd72, H2afz, Slamf9, H2-DMb2, Actb, Ptma, Cfp, Cks1b, Hexb, Mki67 
+Negative:  Lyz2, Cebpb, Plac8, Hp, Chil3, Wfdc17, Ifitm3, Ifitm6, Ly6c2, Ccl6 
+	   Tyrobp, Sirpb1c, Msrb1, Fos, F13a1, Ifitm2, Fn1, Srgn, Gsr, Tmsb10 
+	   Alox5ap, Junb, Gm9733, Ms4a4b, Clec4e, Btg1, Ms4a6c, Ccl9, S100a6, Nkg7 
+Loading required package: KernSmooth
+KernSmooth 2.23 loaded
+Copyright M. P. Wand 1997-2009
+Loading required package: ROCR
+    Optimal pK = 0.0200
+    nExp = 35  (adj = 31, homotypic prop = 0.114)
+Running SCTransform on assay: RNA
+vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
+Calculating cell attributes from input UMI matrix: log_umi
+Variance stabilizing transformation of count matrix of size 15910 by 2783
+Model formula is y ~ log_umi
+Get Negative Binomial regression parameters per gene
+Using 2000 genes, 2783 cells
+Found 18 outliers - those will be ignored in fitting/regularization step
+
+Second step: Get residuals using fitted parameters for 15910 genes
+Computing corrected count matrix for 15910 genes
+Calculating gene attributes
+Wall clock passed: Time difference of 12.5814 secs
+Determine variable features
+Centering data matrix
+Place corrected count matrix in counts slot
+Set default assay to SCT
+PC_ 1 
+Positive:  Gpx3, Spink1, Fxyd2, mt-Nd2, Aldob, Guca2b, Dbi, Slc34a1, Cd63, mt-Nd3 
+	   Atp1b1, Clu, Slc13a1, mt-Nd4, Ldhb, Spp1, Miox, Ndrg1, Tmem27, Slc27a2 
+	   Pdzk1ip1, Akr1c21, Hrsp12, Wfdc2, Chchd10, Acsm2, Kap, Igfbp7, Keg1, Umod 
+Negative:  Tmsb4x, Lyz2, Fcer1g, Cd74, Actb, Cd52, Ctss, Tyrobp, H2-Aa, Tgfbi 
+	   H2-Ab1, Crip1, H2-Eb1, Ifitm3, C1qb, Coro1a, Alox5ap, Ctsc, Wfdc17, Ms4a6c 
+	   Tmsb10, B2m, Ccr2, Apoe, S100a4, Actg1, C1qa, Ccl9, Vim, S100a6 
+PC_ 2 
+Positive:  Sparc, Tm4sf1, Ly6c1, Ly6a, Emcn, Egfl7, Crip2, Meis2, Slc9a3r2, Clu 
+	   Esam, Plpp1, Cd200, Klf2, Cd34, Gng11, Prkcdbp, Ctla2a, Plat, Pecam1 
+	   Ecscr, Fabp4, Eng, Flt1, Defb1, Ramp2, Cd24a, Tspan8, Nrp1, Serpine2 
+Negative:  Gpx3, Spink1, Aldob, Guca2b, Dbi, Slc34a1, Akr1c21, Miox, Slc13a1, Slc27a2 
+	   Tmem27, Acsm2, Kap, Ftl1, Keg1, Gpx1, Ugt2b38, Ass1, Slc4a4, Gatm 
+	   Hrsp12, Pck1, Glyat, Fbp1, Lyz2, Lrp2, Pdzk1, Cyp2j5, Cd74, Ttc36 
+PC_ 3 
+Positive:  Spink1, Sparc, Gpx3, Tm4sf1, Emcn, Egfl7, Aldob, Meis2, Plpp1, Ly6c1 
+	   Slc9a3r2, Klf2, Esam, Cd34, Timp3, Cd200, Fabp4, Cyp4b1, Pecam1, Slc34a1 
+	   Ctla2a, Igfbp5, Flt1, Eng, Ecscr, Ramp2, Gng11, Plat, Ifitm3, Prkcdbp 
+Negative:  Clu, Defb1, Umod, Lcn2, Wfdc2, Atp1b1, Mt1, Tmem213, Ldhb, Cd24a 
+	   Spp1, Epcam, Sostdc1, Slc12a1, Mt2, Atp1a1, Klk1, Wfdc15b, Mal, Kng2 
+	   Atp6v1g3, Tfcp2l1, Krt7, Ppp1r1a, Ctsd, S100g, Spink8, Clcnkb, Pcolce, Atp6v0d2 
+PC_ 4 
+Positive:  Lyz2, Apoe, C1qb, Ctsc, Fcer1g, Ctss, Tgfbi, C5ar1, Ifitm3, Ccl6 
+	   Cebpb, C1qa, C1qc, Ccl9, Chil3, Cxcl2, Fcgr3, Ftl1, Tyrobp, Ccl2 
+	   Ms4a6c, Fn1, Ms4a6d, Wfdc17, Fos, Pf4, Cd14, Aif1, Alox5ap, Sirpb1c 
+Negative:  Ms4a4b, Nkg7, AW112010, Trbc2, Ccl5, Ptprcap, Tmsb10, Ltb, Cd3g, Cd3d 
+	   Lck, Trac, Thy1, Rps27, Sept1, Ctsw, Rpl13a, Rac2, H2-Q7, Hcst 
+	   Cd2, Cd3e, Lat, Gimap3, Gimap4, Trbc1, Klrk1, Klrd1, Cd52, Il2rb 
+PC_ 5 
+Positive:  Cd74, H2-Aa, H2-Eb1, H2-Ab1, Stmn1, C1qa, C1qb, Tuba1b, C1qc, Tubb5 
+	   2810417H13Rik, Ckb, Mgl2, Hist1h2ap, Hmgb2, Top2a, Birc5, Cd72, H2-DMb1, H2-DMa 
+	   H2afz, Slamf9, Cst3, Ptma, Cks1b, Smc4, Actb, Cfp, Hmgn2, Mki67 
+Negative:  Plac8, Cebpb, Lyz2, Hp, Chil3, Wfdc17, Ifitm6, Ifitm3, Ly6c2, Sirpb1c 
+	   Tyrobp, Ccl6, Msrb1, Fos, F13a1, Ifitm2, Fn1, Srgn, Tmsb10, Alox5ap 
+	   Gsr, Gm9733, Ms4a6c, Junb, Sirpb1b, Clec4e, Btg1, Smpdl3a, S100a6, F10 
+  Doublets detected: 31 (1.5%)
+  Final singlets: 2056
+  Saved: KidneyUUO2_qc.rds
+Warning message:
+In grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y,  :
+  for 'KidneyUUO2 – DoubletFinder' in 'mbcsToSbcs': - substituted for – (U+2013)
+Done: KidneyUUO2
+Filtered objects saved in: /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/seurat_objects
