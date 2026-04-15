@@ -1,0 +1,17 @@
+Loading required package: SeuratObject
+Loading required package: sp
+
+Attaching package: ‘SeuratObject’
+
+The following objects are masked from ‘package:base’:
+
+    intersect, t
+
+=== 03c: Export merged_normalized.rds → h5ad ===
+Input  : /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/integration_output/merged_normalized.rds
+Output : /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/integration_output/merged_normalized.h5ad
+
+[1/5] Loading HVG list...
+  HVGs: 3000 / total genes: 50990
+
+[2/5] Loading merged_normalized.rds (this may take several minutes)...
