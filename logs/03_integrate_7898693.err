@@ -184,3 +184,19 @@ Cells per sample (batch):
   MKA                  : 141,401
 
 Normalizing (log-normalization per sample layer)...
+Finding 3000 variable features...
+  Top HVGs: Slc26a4, Slc12a1, Calb1, Myh11, Ankrd1, Ptn, Cfh, Podxl, Cxcl10, Nupr1
+  HVG list saved (hvg_list.rds)
+Saving merged normalized object to /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/integration_output/merged_normalized.rds ...
+  merged_normalized.rds saved
+
+===== Prep complete (STEPS 1-4) =====
+Total cells : 2,877,370
+HVGs saved  : 3000  →  /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/integration_output/hvg_list.rds
+Merged obj  : /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/integration_output/merged_normalized.rds
+Next: run 04_integrate_harmony.R for ScaleData / PCA / Harmony / UMAP
+
+Full-dataset integration (no sketch)...
+ScaleData + RunPCA on full dataset...
+/var/spool/slurmd/job7898693/slurm_script: line 22: 2229582 Killed                  Rscript 03_integrate_harmony.R
+slurmstepd: error: Detected 1 oom_kill event in StepId=7898693.batch. Some of the step tasks have been OOM Killed.

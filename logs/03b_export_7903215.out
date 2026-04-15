@@ -1,0 +1,11 @@
+             used    (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells    5535236   295.7   13050204   697.0    7751784   414.0
+Vcells 2062347615 15734.5 5815721169 44370.5 6755384937 51539.5
+Job Statistics for 7903215:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+         7903215     xxw004 2026-04-14T21:45:55 2026-04-14T21:49:40   00:03:45  03:37.526     FAILED   r1pl-hpcf-h05 
+   7903215.batch            2026-04-14T21:45:55 2026-04-14T21:49:40   00:03:45  03:37.524     FAILED   r1pl-hpcf-h05 
+  7903215.extern            2026-04-14T21:45:55 2026-04-14T21:49:40   00:03:45  00:00.001  COMPLETED   r1pl-hpcf-h05 
+Requested Resources: billing=8,cpu=8,mem=256G,node=1
+Maximum CPU Memory: 65099.24M; 	CPU Efficiency: 12.11% of 00:30:00 core-walltime

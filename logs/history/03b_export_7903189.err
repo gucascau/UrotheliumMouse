@@ -1,0 +1,15 @@
+Loading required package: SeuratObject
+Loading required package: sp
+
+Attaching package: ‘SeuratObject’
+
+The following objects are masked from ‘package:base’:
+
+    intersect, t
+
+=== 03b: Export for scVI/scANVI ===
+Excluded from integration : BladderHomogenate1, BladderHomogenate2
+Excluded (no raw counts)  : ChenSpatial, LakesnRNA, MKA, KudoUUOUrothelium, KidneyUUO7, KidneyUUO8
+Error: merged_pre_integration.rds not found at: /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/integration_output/merged_pre_integration.rds
+Run 03_integrate_harmony.R first.
+Execution halted

@@ -17,7 +17,7 @@
 #     adata.var          — gene metadata + highly_variable flag (from merged HVG)
 #     adata.uns["hvg"]   — list of HVG gene names
 #
-# Run AFTER 03_integrate_harmony.R has written merged_pre_integration.rds
+# Run AFTER 03_integrate_harmony.R has written merged_normalized.rds
 # (which carries the HVG selection).
 ################################################################################
 
@@ -57,20 +57,19 @@ message(sprintf("Excluded (no raw counts)  : %s", paste(NO_COUNTS_SAMPLES, colla
 # STEP 1: Load HVG list + full gene universe from merged_pre_integration.rds
 ################################################################################
 
-merged_path <- file.path(OUT_DIR, "merged_pre_integration.rds")
-if (!file.exists(merged_path)) {
+hvg_path <- file.path(OUT_DIR, "hvg_list.rds")
+if (!file.exists(hvg_path)) {
   stop(sprintf(
-    "merged_pre_integration.rds not found at: %s\nRun 03_integrate_harmony.R first.",
-    merged_path
+    "hvg_list.rds not found at: %s\nRun 03_integrate_harmony.R first.",
+    hvg_path
   ))
 }
 
-message("Loading merged object to retrieve HVG list and gene universe...")
-merged_obj <- readRDS(merged_path)
-hvg_genes  <- VariableFeatures(merged_obj)
-all_genes  <- rownames(merged_obj)
+message("Loading HVG list and gene universe from hvg_list.rds...")
+hvg_data  <- readRDS(hvg_path)
+hvg_genes <- hvg_data$hvg
+all_genes <- hvg_data$all_genes
 message(sprintf("  HVGs: %d / total genes: %d", length(hvg_genes), length(all_genes)))
-rm(merged_obj); gc()
 
 
 ################################################################################

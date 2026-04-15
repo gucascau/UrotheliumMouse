@@ -1,3 +1,11 @@
              used    (Mb)  gc trigger     (Mb)    max used     (Mb)
 Ncells    9958325   531.9    20854860   1113.8    20854860   1113.8
 Vcells 9310951406 71037.0 27411045413 209129.7 34262801421 261404.5
+Job Statistics for 7898693:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+         7898693     xxw004 2026-04-14T09:30:05 2026-04-14T14:04:39   04:34:34   04:33:12 OUT_OF_ME+   r1pl-hpcf-h05 
+   7898693.batch            2026-04-14T09:30:05 2026-04-14T14:04:39   04:34:34   04:33:12 OUT_OF_ME+   r1pl-hpcf-h05 
+  7898693.extern            2026-04-14T09:30:05 2026-04-14T14:04:39   04:34:34  00:00.001  COMPLETED   r1pl-hpcf-h05 
+Requested Resources: billing=16,cpu=16,mem=512G,node=1
+Maximum CPU Memory: 524286.73M; 	CPU Efficiency: 6.22% of 3-01:13:04 core-walltime

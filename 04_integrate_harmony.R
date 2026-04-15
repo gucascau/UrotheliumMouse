@@ -23,6 +23,10 @@ library(harmony)
 library(ggplot2)
 library(patchwork)
 
+# FindNeighbors uses future for parallelism; on 2.8M cells the SNN index and
+# query matrix exceed the 500 MiB default.  Raise the limit to 8 GiB.
+options(future.globals.maxSize = 8 * 1024^3)
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 DATA_DIR <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells"
 OUT_DIR  <- file.path(DATA_DIR, "integration_output")
