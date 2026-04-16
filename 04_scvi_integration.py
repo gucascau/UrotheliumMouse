@@ -4,7 +4,7 @@ Script 04: scVI / scANVI integration of mouse kidney UUO single-cell data
 
 Workflow
 --------
-1. Load h5ad exported by 03b_export_for_scvi.R
+1. Load merged_normalized.h5ad exported by 03c_export_merged_normalized_h5ad.R
 2. Subset to HVGs, log-normalise a copy for PCA/UMAP visualisation
 3. Train scVI (VAE) with batch_key = "sample_id" and
    categorical covariate "technology" to correct cross-platform effects
@@ -40,7 +40,7 @@ DATA_DIR = "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCel
 OUT_DIR  = os.path.join(DATA_DIR, "integration_output")
 os.makedirs(OUT_DIR, exist_ok=True)
 
-H5AD_IN         = os.path.join(OUT_DIR, "scvi_input.h5ad")
+H5AD_IN         = os.path.join(OUT_DIR, "merged_normalized.h5ad")
 H5AD_OUT        = os.path.join(OUT_DIR, "scvi_integrated.h5ad")
 SCVI_MODEL_DIR  = os.path.join(OUT_DIR, "scvi_model")
 SCANVI_MODEL_DIR= os.path.join(OUT_DIR, "scanvi_model")
@@ -94,24 +94,29 @@ adata = sc.read_h5ad(H5AD_IN)
 log.info("  Loaded: %d cells × %d genes", adata.n_obs, adata.n_vars)
 log.info("  Samples: %s", sorted(adata.obs[BATCH_KEY].unique()))
 
-# Store raw counts before any normalisation step
-adata.layers["counts"] = adata.X.copy()
+# merged_normalized.h5ad layout (from 03c_export_merged_normalized_h5ad.R):
+#   adata.X              — log-normalised data
+#   adata.layers["counts"] — raw integer counts (required by scVI)
+if "counts" not in adata.layers:
+    log.warning("No 'counts' layer found in h5ad — scVI requires raw integer counts.")
+    log.warning("  Storing X as 'counts' (may be normalised — results suboptimal).")
+    adata.layers["counts"] = adata.X.copy()
+else:
+    log.info("  'counts' layer found — will use for scVI training.")
 
 
 ###############################################################################
-# STEP 2: Subset to HVGs  +  log-normalise for PCA / UMAP visualisation
+# STEP 2: Subset to HVGs  +  preserve log-normalised layer for visualisation
 ###############################################################################
 
 log.info("Subsetting to %d HVGs …", adata.var["highly_variable"].sum())
 adata = adata[:, adata.var["highly_variable"]].copy()
 log.info("  After subsetting: %d cells × %d genes", adata.n_obs, adata.n_vars)
 
-# Log-normalise a copy for visualisation (stored separately; scVI uses raw counts)
-sc.pp.normalize_total(adata, target_sum=1e4)
-sc.pp.log1p(adata)
+# X already holds log-normalised values from the h5ad — preserve as a named layer
 adata.layers["log_norm"] = adata.X.copy()
 
-# Set X back to raw counts for scVI
+# Set X to raw counts for scVI
 adata.X = adata.layers["counts"]
 
 

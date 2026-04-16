@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:1            # scVI trains ~10x faster on GPU
 #SBATCH --time=12:00:00
 #SBATCH --partition=gpu         # adjust to your cluster's GPU partition name
-# Run AFTER 03b_export_for_scvi.R has written scvi_input.h5ad
+# Run AFTER 03c_export_merged_normalized_h5ad.R has written integration_output/merged_normalized.h5ad
 
 mkdir -p logs
 

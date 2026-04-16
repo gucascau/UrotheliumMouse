@@ -1,0 +1,8 @@
+Job Statistics for 7905333:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+         7905333     xxw004 2026-04-15T13:42:15 2026-04-15T14:13:52   00:31:37  31:02.803     FAILED   r1pl-hpcf-h01 
+   7905333.batch            2026-04-15T13:42:15 2026-04-15T14:13:52   00:31:37  31:02.801     FAILED   r1pl-hpcf-h01 
+  7905333.extern            2026-04-15T13:42:15 2026-04-15T14:13:52   00:31:37  00:00.001  COMPLETED   r1pl-hpcf-h01 
+Requested Resources: billing=8,cpu=8,mem=512G,node=1
+Maximum CPU Memory: 355018.11M; 	CPU Efficiency: 12.28% of 04:12:56 core-walltime

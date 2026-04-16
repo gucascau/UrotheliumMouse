@@ -3,8 +3,8 @@
 #SBATCH --output=logs/04_harmony_%j.out
 #SBATCH --error=logs/04_harmony_%j.err
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=512G          # merged_normalized.rds is large; ScaleData + PCA need ~400 GB
+#SBATCH --cpus-per-task=24
+#SBATCH --mem=1024G         # merged_normalized.rds is large; ScaleData + PCA need ~400 GB
 #SBATCH --time=12:00:00
 #SBATCH --partition=himem
 # Run AFTER 03_integrate_harmony.R has written:

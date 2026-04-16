@@ -1,0 +1,8 @@
+Job Statistics for 7908038:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+         7908038     xxw004 2026-04-15T19:31:15 2026-04-15T19:57:31   00:26:16  26:06.466     FAILED   r1pl-hpcf-h03 
+   7908038.batch            2026-04-15T19:31:15 2026-04-15T19:57:31   00:26:16  26:06.464     FAILED   r1pl-hpcf-h03 
+  7908038.extern            2026-04-15T19:31:15 2026-04-15T19:57:31   00:26:16  00:00.001  COMPLETED   r1pl-hpcf-h03 
+Requested Resources: billing=8,cpu=8,mem=512G,node=1
+Maximum CPU Memory: 375439.61M; 	CPU Efficiency: 12.42% of 03:30:08 core-walltime

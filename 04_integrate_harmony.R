@@ -27,6 +27,13 @@ library(patchwork)
 # query matrix exceed the 500 MiB default.  Raise the limit to 8 GiB.
 options(future.globals.maxSize = 8 * 1024^3)
 
+# Helper: log current R memory usage at key steps
+log_mem <- function(label) {
+  g  <- gc(verbose = FALSE)
+  mb <- sum(g[, 2])
+  message(sprintf("  [mem] %s: %.1f GB in use", label, mb / 1024))
+}
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 DATA_DIR <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells"
 OUT_DIR  <- file.path(DATA_DIR, "integration_output")
@@ -48,12 +55,16 @@ RESOLUTION   <- 0.5
 ################################################################################
 
 for (p in c(NORM_PATH, HVG_PATH)) {
-  if (!file.exists(p)) stop(sprintf("Required file not found: %s\nRun 03_integrate_harmony.R first.", p))
+  if (!file.exists(p))
+    stop("Required file not found: ", p,
+         "\nRun 03_integrate_harmony.R first.")
 }
 
 message("Loading merged normalized object...")
 merged <- readRDS(NORM_PATH)
 message(sprintf("  Loaded: %d cells × %d genes", ncol(merged), nrow(merged)))
+message(sprintf("  Layers: %s", paste(Layers(merged), collapse = ", ")))
+log_mem("after load")
 
 message("Loading HVG list...")
 hvg_obj <- readRDS(HVG_PATH)
@@ -68,18 +79,22 @@ rm(hvg_obj); gc()
 
 message("JoinLayers — collapsing per-sample layers...")
 merged <- JoinLayers(merged)
-message("  Layers joined")
+message(sprintf("  Layers after join: %s",
+                paste(Layers(merged), collapse = ", ")))
+log_mem("after JoinLayers")
 
 
 ################################################################################
 # STEP 3: ScaleData
 ################################################################################
 
-message("ScaleData (regress pct_mt)...")
+message("ScaleData (regress pct_mt, HVGs only)...")
 merged <- ScaleData(merged,
+                    features        = VariableFeatures(merged),
                     vars.to.regress = "pct_mt",
-                    verbose = FALSE)
+                    verbose         = FALSE)
 message("  ScaleData done")
+log_mem("after ScaleData")
 
 
 ################################################################################
@@ -90,32 +105,64 @@ message(sprintf("RunPCA (%d PCs)...", N_PCS))
 merged <- RunPCA(merged, npcs = N_PCS, verbose = FALSE)
 message("  PCA done")
 
+# save into the Seurat object for later checkpointing — allows re-running FindNeighbors/UMAP
+saveRDS(merged,
+        file.path(OUT_DIR, "Integrated_ScaledPCA.rds"))
+
+# scale.data is dense (HVGs × 2.8M cells, ~69 GB) — only needed for RunPCA.
+# Drop it immediately to free RAM before Harmony + FindNeighbors.
+merged[["RNA"]]$scale.data <- NULL
+gc()
+log_mem("after PCA + scale.data freed")
+
 
 ################################################################################
 # STEP 5: RunHarmony
 ################################################################################
 
-message(sprintf("RunHarmony (batch = %s)...", paste(HARMONY_VARS, collapse = " + ")))
-merged <- RunHarmony(
-  object         = merged,
-  group.by.vars  = HARMONY_VARS,
-  reduction      = "pca",
-  reduction.save = "harmony",
-  max_iter       = 20,
-  verbose        = FALSE
+message(sprintf("RunHarmony (batch = %s)...",
+                paste(HARMONY_VARS, collapse = " + ")))
+# suppressWarnings: silences k-means "Quick-TRANSfer" non-convergence warnings
+# at 2.8M cells — Harmony still converges correctly.
+suppressWarnings(
+  merged <- RunHarmony(
+    object         = merged,
+    group.by.vars  = HARMONY_VARS,
+    reduction      = "pca",
+    reduction.save = "harmony",
+    max_iter       = 20,
+    verbose        = FALSE
+  )
 )
 message("  Harmony done")
+log_mem("after Harmony")
 
+# Checkpoint: save Harmony embedding so FindNeighbors/UMAP can be rerun
+# without repeating the 4-hour ScaleData + PCA + Harmony steps.
+saveRDS(Embeddings(merged, "harmony"),
+        file.path(OUT_DIR, "harmony_embeddings.rds"))
+message("  Harmony embedding checkpoint saved")
 
 ################################################################################
 # STEP 6: FindNeighbors + FindClusters
 ################################################################################
 
-message("FindNeighbors + FindClusters...")
-merged <- FindNeighbors(merged, reduction = "harmony", dims = HARMONY_DIMS,
-                        verbose = FALSE)
+message("FindNeighbors (annoy, k=15)...")
+# annoy: approximate NN — far lower peak memory than exact NN for 2.8M cells
+merged <- FindNeighbors(
+  merged,
+  reduction = "harmony",
+  dims      = HARMONY_DIMS,
+  nn.method = "annoy",
+  k.param   = 15,
+  verbose   = FALSE
+)
+log_mem("after FindNeighbors")
+
+message(sprintf("FindClusters (resolution = %.2f)...", RESOLUTION))
 merged <- FindClusters(merged, resolution = RESOLUTION, verbose = FALSE)
 message(sprintf("  Clusters: %d", length(unique(merged$seurat_clusters))))
+gc()
 
 
 ################################################################################
@@ -142,7 +189,8 @@ p3 <- DimPlot(merged, group.by = "technology",      reduction = "umap",
               label = FALSE, raster = TRUE) + ggtitle("By Technology")
 p4 <- DimPlot(merged, group.by = "seurat_clusters", reduction = "umap",
               label = TRUE,  raster = TRUE) + ggtitle("Clusters")
-p5 <- DimPlot(merged, group.by = "paper",           reduction = "umap",
+p5 <- DimPlot(merged, group.by = "paper",
+              reduction = "umap",
               label = FALSE, raster = TRUE) + ggtitle("By Paper")
 p6 <- DimPlot(merged, group.by = "gsm_id",          reduction = "umap",
               label = FALSE, raster = TRUE) + ggtitle("By GSM/GSE ID")
@@ -152,7 +200,8 @@ print(p1 + p2 + p3 + p4 + p5 + p6 + plot_layout(ncol = 2))
 dev.off()
 
 if ("cell_type_original" %in% colnames(merged@meta.data)) {
-  p7 <- DimPlot(merged, group.by = "cell_type_original", reduction = "umap",
+  p7 <- DimPlot(merged, group.by = "cell_type_original",
+                reduction = "umap",
                 label = TRUE, repel = TRUE, raster = TRUE) +
         ggtitle("Known cell type annotations")
   pdf(file.path(OUT_DIR, "UMAP_known_annotations.pdf"), width = 12, height = 10)

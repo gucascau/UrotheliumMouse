@@ -7,6 +7,9 @@ The following objects are masked from ‘package:base’:
 
     intersect, t
 
+Registered S3 method overwritten by 'zellkonverter':
+  method                                             from      
+  py_to_r.pandas.core.arrays.categorical.Categorical reticulate
 === 03c: Export merged_normalized.rds → h5ad ===
 Input  : /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/integration_output/merged_normalized.rds
 Output : /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/integration_output/merged_normalized.h5ad
@@ -21,18 +24,13 @@ Output : /vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/
 [3/5] JoinLayers — collapsing per-sample layers...
   Layers after join: scale.data, data, counts
 
-[4/5] Extracting data layer (log-normalised counts)...
-  data layer: 47597 genes × 2877370 cells  (class: dgCMatrix)
-  Extracting counts layer (raw integer counts)...
-Warning message:
-  counts layer dimensions differ from data layer — skipping counts export 
-  Cell metadata: 2877370 cells × 12 columns
-  Gene metadata: 47597 genes (3000 HVGs flagged)
+[4/5] Dropping scale.data layer (HVG-only, incompatible dims for SCE)...
+Warning: Removing default layer, setting default to data
+  Layers for export: data, counts
 
-[5/5] Building AnnData and writing h5ad...
-  Converting data matrix to scipy CSR...
-Error in py_call_impl(callable, call_args$unnamed, call_args$named) : 
-  ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part.
-Run `reticulate::py_last_error()` for details.
-Calls: dgc_to_csr -> <Anonymous> -> py_call_impl
+[4/5] Converting to SingleCellExperiment...
+Error in method(object) : all assays must have the same nrow and ncol
+Calls: as.SingleCellExperiment ... validObject -> anyStrings -> isTRUE -> validityMethod -> method
+In addition: Warning message:
+Layer ‘scale.data’ is empty 
 Execution halted

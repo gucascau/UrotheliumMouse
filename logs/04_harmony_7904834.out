@@ -1,3 +1,11 @@
               used    (Mb)  gc trigger     (Mb)    max used    (Mb)
 Ncells     7244503   386.9    13350505    713.0     7888663   421.4
 Vcells 11334980934 86479.1 18436790318 140661.6 12797289872 97635.6
+Job Statistics for 7904834:
+           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
+---------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
+         7904834     xxw004 2026-04-15T09:19:36 2026-04-15T13:26:46   04:07:10   04:05:59     FAILED   r1pl-hpcf-h03 
+   7904834.batch            2026-04-15T09:19:36 2026-04-15T13:26:46   04:07:10   04:05:59     FAILED   r1pl-hpcf-h03 
+  7904834.extern            2026-04-15T09:19:36 2026-04-15T13:26:46   04:07:10  00:00.002  COMPLETED   r1pl-hpcf-h03 
+Requested Resources: billing=16,cpu=16,mem=512G,node=1
+Maximum CPU Memory: 524286.68M; 	CPU Efficiency: 6.22% of 2-17:54:40 core-walltime
