@@ -13,13 +13,13 @@
 #
 #   Step 10 : Build full-gene h5ad from original per-sample files
 #             (~25k genes, all 1.1M cells incl. reference atlases)
-#   Step 11 : Re-run scVI integration on HVG subset (5 000 HVGs),
-#             store all genes + UMAP + clusters
+#   Step 11 : Attach scVI/scANVI embeddings from the existing 3,000-HVG models,
+#             then store all genes + UMAP + clusters
 #   Step 10b: Convert full-gene scVI-integrated h5ad → Seurat RDS
 #
 # Memory note: UUOProjectObject_F.h5ad is 44 GB on disk (~150 GB in RAM).
 # Total peak RAM ~400–600 GB. 1 300 G requested for safety.
-# GPU required for step 11 (scVI training).
+# GPU requested for faster scVI/scANVI latent extraction; Step 11 does not retrain.
 
 SCRIPT_DIR="/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/RenalUrotheliumScripts"
 OUT_DIR="${SCRIPT_DIR}/output"
@@ -46,9 +46,9 @@ echo "Done:  $(date)"
 
 # ── Step 11: scVI integration ─────────────────────────────────────────────────
 echo ""
-echo "=== Step 11: scVI integration (5000 HVGs, full gene object) ==="
+echo "=== Step 11: scVI/scANVI embeddings (existing 3000-HVG models, full gene object) ==="
 echo "Start: $(date)"
-python "${SCRIPT_DIR}/11_scvi_integrate_fullgene.py" --n_hvg 5000
+python "${SCRIPT_DIR}/11_scvi_integrate_fullgene.py"
 if [ $? -ne 0 ]; then echo "ERROR in Step 11"; exit 1; fi
 echo "Done:  $(date)"
 
@@ -82,6 +82,7 @@ cat("  SCE dims:", nrow(sce), "genes x", ncol(sce), "cells\n")
 
 cat("Converting SCE -> Seurat ...\n")
 so <- as.Seurat(sce, counts = "counts", data = "lognorm")
+rm(sce); gc()
 
 cat("Transferring reductions from integrated RDS ...\n")
 so_int    <- readRDS(int_rds)

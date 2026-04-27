@@ -40,6 +40,8 @@ cat("  Assays:", assayNames(sce), "\n")
 # ── Convert to Seurat ─────────────────────────────────────────────────────────
 cat("Converting SCE → Seurat ...\n")
 so <- as.Seurat(sce, counts = "counts", data = "lognorm")
+rm(sce)
+gc()
 cat("  Genes:", nrow(so), "\n")
 cat("  Cells:", ncol(so), "\n")
 

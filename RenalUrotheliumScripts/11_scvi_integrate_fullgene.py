@@ -18,6 +18,7 @@ Usage
   python 11_scvi_integrate_fullgene.py
 """
 
+import gc
 import logging
 import os
 import scanpy as sc
@@ -98,6 +99,8 @@ def main():
     log.info("Computing scVI latent representation (%d cells) ...", adata.n_obs)
     adata.obsm["X_scVI"] = model.get_latent_representation()
     log.info("  X_scVI shape: %s", adata.obsm["X_scVI"].shape)
+    del model
+    gc.collect()
 
     # ── Step 4b: scANVI latent representation (if model exists) ───────────────
     if os.path.isdir(SCANVI_DIR):
@@ -107,7 +110,18 @@ def main():
             log.info("  scANVI model loaded")
             adata.obsm["X_scANVI"] = scanvi_model.get_latent_representation()
             log.info("  X_scANVI shape: %s", adata.obsm["X_scANVI"].shape)
+            del scanvi_model
+            gc.collect()
+        except Exception as e:
+            log.warning("  scANVI loading failed (%s) — skipping", e)
+    else:
+        log.info("No scANVI model found at %s — skipping", SCANVI_DIR)
 
+    del adata_hvg
+    gc.collect()
+
+    if "X_scANVI" in adata.obsm:
+        try:
             sc.pp.neighbors(adata, use_rep="X_scANVI", n_neighbors=N_NEIGHBOURS,
                             key_added="scANVI")
             sc.tl.leiden(adata, neighbors_key="scANVI", resolution=LEIDEN_RES,
@@ -116,9 +130,7 @@ def main():
             adata.obsm["X_umap_scANVI"] = adata.obsm["X_umap"].copy()
             log.info("  scANVI clusters: %d", adata.obs["leiden_scANVI"].nunique())
         except Exception as e:
-            log.warning("  scANVI loading failed (%s) — skipping", e)
-    else:
-        log.info("No scANVI model found at %s — skipping", SCANVI_DIR)
+            log.warning("  scANVI graph/UMAP failed (%s) — skipping", e)
 
     # ── Step 5: Neighbourhood graph, UMAP, Leiden (from scVI) ─────────────────
     log.info("Building neighbourhood graph from scVI latent ...")

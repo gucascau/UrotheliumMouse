@@ -18,6 +18,10 @@ mkdir -p "${SCRIPT_DIR}/logs"
 source /home/gdbecknelllab/xxw004/Software/miniconda3/etc/profile.d/conda.sh
 conda activate cell2loc_env
 
+export MPLCONFIGDIR="/tmp/matplotlib-${USER}"
+export NUMBA_CACHE_DIR="/tmp/numba-${USER}"
+mkdir -p "${MPLCONFIGDIR}" "${NUMBA_CACHE_DIR}"
+
 echo "Python:      $(python --version)"
 echo "Hostname:    $(hostname)"
 echo "Start time:  $(date)"
