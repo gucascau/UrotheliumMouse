@@ -57,7 +57,7 @@ OBSM_KEYS = ["X_scVI", "X_scANVI", "X_umap_scVI", "X_umap_scANVI", "X_umap"]
 def lognorm(X, target_sum=1e4):
     """normalize_total + log1p on a sparse or dense matrix (cells × genes)."""
     if sp.issparse(X):
-        X = X.astype(np.float32)
+        X = X.astype(np.float32, copy=True)
         totals = np.asarray(X.sum(axis=1)).ravel()
         totals[totals == 0] = 1
         # Divide each row by its total
@@ -65,7 +65,7 @@ def lognorm(X, target_sum=1e4):
         X = diag.dot(X) * target_sum
         X.data = np.log1p(X.data)
     else:
-        X = X.astype(np.float32)
+        X = X.astype(np.float32, copy=True)
         totals = X.sum(axis=1, keepdims=True)
         totals[totals == 0] = 1
         X = np.log1p(X / totals * target_sum)
@@ -87,16 +87,21 @@ def load_source_counts(h5ad_path, needed_barcodes):
 
     # Priority: raw.X (CellxGene integer counts) → layers["counts"] → X
     if a.raw is not None:
-        raw = a.raw.to_adata()
-        if "feature_name" in raw.var.columns:
-            raw.var_names = raw.var["feature_name"].astype(str).values
-            raw.var_names_make_unique()
-        # Rebuild minimal AnnData with raw counts
-        bc_mask = raw.obs_names.isin(needed_barcodes)
-        a_sub   = raw[bc_mask].copy()
+        # Slice the parent first; converting all raw cells first creates a large
+        # temporary copy for the biggest reference inputs.
+        bc_mask = a.obs_names.isin(needed_barcodes)
+        a_view = a[bc_mask, :].copy()
+        a_sub = a_view.raw.to_adata()
+        if "feature_name" in a_sub.var.columns:
+            a_sub.var_names = a_sub.var["feature_name"].astype(str).values
+            a_sub.var_names_make_unique()
         a_sub.X = sp.csr_matrix(a_sub.X).astype(np.float32)
         a_sub.X.data = np.round(a_sub.X.data)
-        return a_sub
+        return ad.AnnData(
+            X=a_sub.X,
+            obs=a_sub.obs[[]].copy(),
+            var=pd.DataFrame(index=a_sub.var_names.copy()),
+        )
 
     # Subset to needed barcodes
     bc_mask = a.obs_names.isin(needed_barcodes)
@@ -118,7 +123,7 @@ def load_source_counts(h5ad_path, needed_barcodes):
     result = ad.AnnData(
         X   = X,
         obs = a_sub.obs[[]].copy(),   # keep index only
-        var = a_sub.var[[]].copy(),
+        var = pd.DataFrame(index=a_sub.var_names.copy()),
     )
     result.var_names = a_sub.var_names
     return result
@@ -140,7 +145,7 @@ def main():
     adata_int.file.close()
 
     # All cells (experimental + reference atlases)
-    obs_exp  = obs_int.copy()
+    obs_exp = obs_int
     print(f"  Total cells: {len(obs_exp):,}")
 
     # Strip batch suffix to recover original barcodes
@@ -193,29 +198,41 @@ def main():
     adata.X.data = np.nan_to_num(adata.X.data, nan=0.0)
     print(f"  Concatenated: {adata.n_obs:,} cells × {adata.n_vars:,} genes")
 
-    # ── Step 4: Reorder to match obs_exp index ────────────────────────────────
+    # ── Step 4: Keep cells with integrated metadata ───────────────────────────
     shared = adata.obs_names.intersection(obs_exp.index)
-    adata  = adata[shared].copy()
+    if len(shared) < adata.n_obs:
+        print(f"  Dropping {adata.n_obs - len(shared):,} cells without integrated metadata")
+        adata = adata[shared].copy()
+
+    missing_from_counts = obs_exp.index.difference(adata.obs_names)
+    if len(missing_from_counts) > 0:
+        print(f"  WARNING: {len(missing_from_counts):,} integrated cells missing full-gene counts")
     print(f"  After barcode alignment: {adata.n_obs:,} cells")
 
     # ── Step 5: Store raw counts + log-norm ──────────────────────────────────
-    adata.layers["counts"] = sp.csr_matrix(adata.X).astype(np.float32)
+    adata.X = sp.csr_matrix(adata.X, dtype=np.float32)
+    adata.layers["counts"] = adata.X
     print("  Computing log-normalisation ...")
-    adata.layers["lognorm"] = lognorm(adata.layers["counts"])
-    adata.X = adata.layers["lognorm"].copy()
+    lognorm_matrix = lognorm(adata.layers["counts"])
+    adata.layers["lognorm"] = lognorm_matrix
+    adata.X = lognorm_matrix
+    gc.collect()
 
     # ── Step 6: Transfer metadata and embeddings ──────────────────────────────
     print("  Transferring metadata from integrated object ...")
     adata.obs = obs_exp.loc[adata.obs_names].drop(columns=["_orig_bc"])
 
+    emb_indexer = obs_exp.index.get_indexer(adata.obs_names)
+    if np.any(emb_indexer < 0):
+        sys.exit("ERROR: Some cells are missing from integrated embedding metadata.")
+
     for key, emb in obsm_int.items():
-        emb_df = pd.DataFrame(
-            emb,
-            index=obs_int.index,
-        )
-        shared_emb = emb_df.loc[adata.obs_names]
-        adata.obsm[key] = shared_emb.values
+        adata.obsm[key] = emb[emb_indexer]
         print(f"    Transferred obsm: {key}")
+
+    # Keep only gene names in var. Some source files carry mixed-type metadata
+    # columns that h5py cannot serialize reliably after an outer concat.
+    adata.var = pd.DataFrame(index=adata.var_names.copy())
 
     # ── Step 7: Save ──────────────────────────────────────────────────────────
     print(f"\nSaving → {OUT_PATH}")
