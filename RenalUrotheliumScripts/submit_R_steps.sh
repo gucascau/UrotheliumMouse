@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=RenalUro_R
+#SBATCH --job-name=RenalUro_extract_R
 #SBATCH --output=/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/RenalUrotheliumScripts/logs/R_steps_%j.out
 #SBATCH --error=/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/RenalUrotheliumScripts/logs/R_steps_%j.err
 #SBATCH --ntasks=1
@@ -13,10 +13,25 @@ SCRIPT_DIR="/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCel
 mkdir -p "${SCRIPT_DIR}/logs"
 
 echo "======================================================"
-echo "  RenalUrothelium R Steps (4 + 5)"
+echo "  RenalUrothelium Extract + R Steps (3 + 4 + 5)"
 echo "  Host     : $(hostname)"
 echo "  Start    : $(date)"
 echo "======================================================"
+echo ""
+
+# ── Step 3: Extract urothelial cells ─────────────────────────────────────────
+echo "=== Step 3: Extract urothelial cells ==="
+echo "Start: $(date)"
+
+source /home/gdbecknelllab/xxw004/Software/miniconda3/etc/profile.d/conda.sh
+conda activate cell2loc_env
+export SLURM_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK:-32}
+
+python "${SCRIPT_DIR}/03_extract_uro.py"
+if [ $? -ne 0 ]; then echo "ERROR in Step 3"; exit 1; fi
+
+conda deactivate
+echo "Done:  $(date)"
 echo ""
 
 # ── Load R environment ────────────────────────────────────────────────────────
@@ -43,7 +58,7 @@ echo "Done:  $(date)"
 echo ""
 
 echo "======================================================"
-echo "  R steps complete: $(date)"
+echo "  Extract + R steps complete: $(date)"
 echo "======================================================"
 
 sacct -j "${SLURM_JOB_ID}" \

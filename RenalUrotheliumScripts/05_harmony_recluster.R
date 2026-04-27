@@ -1,13 +1,14 @@
 ################################################################################
 # 05_harmony_recluster.R — Harmony reclustering of renal urothelial cells
 #
-# Input : output/RenalUrothelium_uro_cells.rds
-#         counts layer = log-normalised X from scVI h5ad
+# Input : output/RenalUrothelium_uro_cells_fullgene_scvi.rds
+#         counts layer = raw counts
+#         data layer   = log-normalised expression from AnnData layers["lognorm"]
 #
 # Steps:
 #   1. Load Seurat object
-#   2. Set data layer = counts (already log-norm)
-#   3. Compute pct_mt + FindVariableFeatures (3000 HVGs)
+#   2. Verify counts/data layers
+#   3. Compute pct_mt from raw counts + FindVariableFeatures (3000 HVGs)
 #   4. ScaleData (regress pct_mt)
 #   5. RunPCA (20 PCs)
 #   6. RunHarmony (sample_id; +technology/source if >1 level)
@@ -35,8 +36,8 @@ BASE_DIR <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCe
 OUT_DIR  <- file.path(BASE_DIR, "RenalUrotheliumScripts", "output")
 dir.create(OUT_DIR, showWarnings = FALSE)
 
-IN_PATH  <- file.path(OUT_DIR, "RenalUrothelium_uro_cells.rds")
-OUT_PATH <- file.path(OUT_DIR, "RenalUrothelium_harmony_integrated.rds")
+IN_PATH  <- file.path(OUT_DIR, "RenalUrothelium_uro_cells_fullgene_scvi.rds")
+OUT_PATH <- file.path(OUT_DIR, "RenalUrothelium_uro_cells_fullgene_harmony_integrated.rds")
 
 # ── Parameters ────────────────────────────────────────────────────────────────
 N_HVG        <- 3000
@@ -52,7 +53,7 @@ RESOLUTION   <- 0.5
 if (!file.exists(IN_PATH))
   stop("Input not found: ", IN_PATH)
 
-message("Loading RenalUrothelium_uro_cells.rds ...")
+message("Loading RenalUrothelium_uro_cells_fullgene_scvi.rds ...")
 so <- readRDS(IN_PATH)
 message(sprintf("  Loaded: %d cells × %d genes", ncol(so), nrow(so)))
 log_mem("after load")
@@ -66,12 +67,19 @@ for (col in c("sample_id", "condition", "technology")) {
 
 
 ################################################################################
-# STEP 2: Set data layer = counts (already log-norm from scVI)
+# STEP 2: Verify expression layers
 ################################################################################
 
-message("Setting data layer from counts (already log-norm) ...")
-so[["RNA"]]$data <- so[["RNA"]]$counts
-log_mem("after setting data layer")
+message("Verifying RNA assay layers ...")
+rna_layers <- Layers(so[["RNA"]])
+message("  RNA layers: ", paste(rna_layers, collapse = ", "))
+
+for (layer in c("counts", "data")) {
+  if (!layer %in% rna_layers) {
+    stop("RNA assay is missing required layer: ", layer)
+  }
+}
+log_mem("after layer check")
 
 
 ################################################################################
@@ -230,7 +238,7 @@ for (ct_col in c("cell_type_scanvi", "cell_type_original")) {
   }
 }
 
-# Urothelium marker FeaturePlots — reload data temporarily
+# Urothelium marker FeaturePlots — reload log-normalised data temporarily
 markers <- c("Krt5", "Krt14", "Krt20", "Krt8", "Krt18",
              "Upk2", "Upk3a", "Trp63", "Upk1a", "Upk1b")
 present <- intersect(markers, rownames(so))
@@ -238,7 +246,7 @@ present <- intersect(markers, rownames(so))
 if (length(present) > 0) {
   message("Restoring data layer for marker plots ...")
   so_tmp <- readRDS(IN_PATH)
-  so[["RNA"]]$data <- so_tmp[["RNA"]]$counts
+  so[["RNA"]]$data <- so_tmp[["RNA"]]$data
   rm(so_tmp)
   gc()
 
