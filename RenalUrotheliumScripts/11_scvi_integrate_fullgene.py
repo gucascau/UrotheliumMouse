@@ -1,75 +1,51 @@
 #!/usr/bin/env python3
 """
-11_scvi_integrate_fullgene.py — scVI integration on the full-transcriptome
-object (~25k genes, all 1.1M cells).
+11_scvi_integrate_fullgene.py — Attach scVI embeddings to the full-gene
+object by reusing the already-trained scVI model (output/scvi_model/).
 
-Key design
-----------
-  • Reads RenalUrothelium_allcells_fullgene.h5ad (built by 10_build_fullgene_h5ad.py).
-  • Selects batch-aware HVGs (N_HVG, default 5 000) and marks them in var.
-  • Trains scVI on the HVG subset — keeping all genes in the stored object.
-  • Computes UMAP and Leiden clusters from the scVI latent space.
-  • Transfers scanvi_Lake_label / scanvi_MKA_label annotations from the
-    existing integrated annotated object (avoids re-running annotation).
-  • Saves RenalUrothelium_allcells_scvi.h5ad with:
-      layers["counts"]   — raw integer counts, all ~25k genes
-      layers["lognorm"]  — log-normalised, all ~25k genes
-      X                  — same as lognorm
-      obsm["X_scVI"]     — 20-dim latent (batch-corrected)
-      obsm["X_umap"]     — UMAP from scVI latent
-      obs["leiden_scVI"] — Leiden clusters
-
-Memory requirements
--------------------
-  Loading the full-gene h5ad (~1.1M × 25k) needs ~200–400 G RAM.
-  Run on a himem node with at least 500 G (1 300 G recommended).
-  A GPU is strongly recommended for scVI training.
+No re-training is performed.  The existing model was trained on the 3,000
+batch-aware HVGs across all 1.1M cells.  This script:
+  1. Loads RenalUrothelium_allcells_fullgene.h5ad  (~25k genes, 1.1M cells).
+  2. Subsets to the same 3,000 HVGs the model knows about.
+  3. Loads the existing scVI model and calls get_latent_representation().
+  4. Computes UMAP and Leiden clusters from the latent space.
+  5. Transfers scanvi_Lake/MKA annotations from the integrated annotated object.
+  6. Saves RenalUrothelium_allcells_scvi.h5ad with all ~25k genes retained
+     plus the scVI UMAP and cluster labels.
 
 Usage
 -----
   python 11_scvi_integrate_fullgene.py
-  python 11_scvi_integrate_fullgene.py --n_hvg 8000 --n_epochs 200
 """
 
-import argparse
 import logging
 import os
-import numpy as np
-import pandas as pd
 import scanpy as sc
 import scvi
-import torch
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-BASE_DIR     = "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells"
-SCRIPT_DIR   = os.path.join(BASE_DIR, "RenalUrotheliumScripts")
-OUT_DIR      = os.path.join(SCRIPT_DIR, "output")
-PLOT_DIR     = os.path.join(OUT_DIR, "plots")
+BASE_DIR   = "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells"
+SCRIPT_DIR = os.path.join(BASE_DIR, "RenalUrotheliumScripts")
+OUT_DIR    = os.path.join(SCRIPT_DIR, "output")
+PLOT_DIR   = os.path.join(OUT_DIR, "plots")
 
-IN_PATH      = os.path.join(OUT_DIR, "RenalUrothelium_allcells_fullgene.h5ad")
-OUT_PATH     = os.path.join(OUT_DIR, "RenalUrothelium_allcells_scvi.h5ad")
-MODEL_DIR    = os.path.join(OUT_DIR, "scvi_fullgene_model")
-ANNOT_H5AD   = os.path.join(OUT_DIR, "RenalUrothelium_integrated_annotated.h5ad")
+IN_PATH    = os.path.join(OUT_DIR, "RenalUrothelium_allcells_fullgene.h5ad")
+OUT_PATH   = os.path.join(OUT_DIR, "RenalUrothelium_allcells_scvi.h5ad")
+MODEL_DIR   = os.path.join(OUT_DIR, "scvi_model")          # existing trained model
+SCANVI_DIR  = os.path.join(OUT_DIR, "scanvi_model")        # existing scANVI model
+ANNOT_H5AD = os.path.join(OUT_DIR, "RenalUrothelium_integrated_annotated.h5ad")
 
 os.makedirs(PLOT_DIR, exist_ok=True)
-os.makedirs(MODEL_DIR, exist_ok=True)
 
-# ── Parameters ─────────────────────────────────────────────────────────────────
+# ── Integration parameters (must match original 02_scvi_integrate.py) ─────────
 BATCH_KEY    = "sample_id"
 CAT_COVS     = ["technology"]
-N_LATENT     = 20
-N_LAYERS     = 2
-N_HIDDEN     = 256
-N_EPOCHS     = 400
-BATCH_SIZE   = 256
-LR           = 1e-3
-LEIDEN_RES   = 0.5
 N_NEIGHBOURS = 15
+LEIDEN_RES   = 0.5
 
-# ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level  = logging.INFO,
     format = "%(asctime)s  %(levelname)s  %(message)s",
@@ -78,56 +54,36 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-def parse_args():
-    p = argparse.ArgumentParser(description=__doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--n_hvg", type=int, default=5000,
-                   help="Number of batch-aware HVGs for scVI training (default: 5000). "
-                        "All other genes are retained in the object but not used for training.")
-    p.add_argument("--n_epochs", type=int, default=N_EPOCHS,
-                   help=f"Max training epochs (default: {N_EPOCHS})")
-    p.add_argument("--skip_annotation_transfer", action="store_true",
-                   help="Skip transferring Lake/MKA annotations from existing object")
-    return p.parse_args()
-
-
 def main():
-    args   = parse_args()
-    n_hvg  = args.n_hvg
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    log.info("PyTorch device: %s", device)
-    if device == "cuda":
-        log.info("  GPU: %s", torch.cuda.get_device_name(0))
-    scvi.settings.dl_num_workers = int(os.environ.get("SLURM_CPUS_PER_TASK", 4))
-
-    # ── Load full-gene object ─────────────────────────────────────────────────
-    log.info("Loading %s ...", IN_PATH)
+    # ── Step 1: Load full-gene object ─────────────────────────────────────────
+    log.info("Loading full-gene object: %s", IN_PATH)
     adata = sc.read_h5ad(IN_PATH)
     log.info("  %d cells × %d genes", adata.n_obs, adata.n_vars)
-    log.info("  Layers: %s", list(adata.layers.keys()))
 
-    # ── Batch-aware HVG selection (mark only, do NOT subset) ─────────────────
-    log.info("Selecting %d batch-aware HVGs (seurat_v3, batch=%s) ...", n_hvg, BATCH_KEY)
-    sc.pp.highly_variable_genes(
-        adata,
-        n_top_genes = n_hvg,
-        batch_key   = BATCH_KEY,
-        flavor      = "seurat_v3",
-        layer       = "counts",
-        subset      = False,          # ← mark HVGs but keep ALL genes
-    )
-    n_marked = int(adata.var["highly_variable"].sum())
-    log.info("  HVGs marked: %d / %d total genes", n_marked, adata.n_vars)
+    # ── Step 2: Get the 3,000 HVG names the model was trained on ──────────────
+    log.info("Reading HVG gene list from integrated annotated object ...")
+    adata_int = sc.read_h5ad(ANNOT_H5AD, backed="r")
+    hvg_genes = list(adata_int.var_names)          # the 3,000 HVGs
+    log.info("  HVGs in existing model: %d", len(hvg_genes))
+    adata_int.file.close()
 
-    # ── Set up scVI on HVG subset ─────────────────────────────────────────────
-    # Subset to HVGs for training — full adata keeps all genes
-    adata_hvg = adata[:, adata.var["highly_variable"]].copy()
-    log.info("Training subset: %d cells × %d HVGs", adata_hvg.n_obs, adata_hvg.n_vars)
+    # Subset full-gene object to those HVGs for model loading
+    hvg_present = [g for g in hvg_genes if g in adata.var_names]
+    missing     = len(hvg_genes) - len(hvg_present)
+    if missing > 0:
+        log.warning("  %d HVGs not found in full-gene object (gene name mismatch?) — "
+                    "using %d / %d", missing, len(hvg_present), len(hvg_genes))
+
+    adata_hvg = adata[:, hvg_present].copy()
+    log.info("  Subset for model: %d cells × %d genes", adata_hvg.n_obs, adata_hvg.n_vars)
+
+    # ── Step 3: Load existing scVI model ──────────────────────────────────────
+    log.info("Loading scVI model from %s ...", MODEL_DIR)
 
     cat_covs = [c for c in CAT_COVS if c in adata_hvg.obs.columns
                 and adata_hvg.obs[c].nunique() > 1]
 
+    # setup_anndata must match exactly what was used during training
     scvi.model.SCVI.setup_anndata(
         adata_hvg,
         layer                      = "counts",
@@ -135,47 +91,37 @@ def main():
         categorical_covariate_keys = cat_covs or None,
     )
 
-    model = scvi.model.SCVI(
-        adata_hvg,
-        n_latent        = N_LATENT,
-        n_layers        = N_LAYERS,
-        n_hidden        = N_HIDDEN,
-        gene_likelihood = "nb",
-        dispersion      = "gene-batch",
-    )
-    log.info("Model:\n%s", model)
+    model = scvi.model.SCVI.load(MODEL_DIR, adata=adata_hvg)
+    log.info("  Model loaded successfully")
 
-    log.info("Training scVI (max_epochs=%d) ...", args.n_epochs)
-    model.train(
-        max_epochs              = args.n_epochs,
-        batch_size              = BATCH_SIZE,
-        early_stopping          = True,
-        early_stopping_patience = 20,
-        plan_kwargs             = {"lr": LR},
-        accelerator             = "gpu" if device == "cuda" else "cpu",
-    )
-
-    # Save ELBO plot
-    hist = model.history
-    fig, ax = plt.subplots(figsize=(7, 4))
-    ax.plot(hist["elbo_train"]["elbo_train"], label="train")
-    if "elbo_validation" in hist:
-        ax.plot(hist["elbo_validation"]["elbo_validation"], label="val")
-    ax.set_xlabel("Epoch"); ax.set_ylabel("ELBO"); ax.legend()
-    ax.set_title(f"scVI ELBO — full-gene ({n_hvg} HVGs)")
-    fig.savefig(os.path.join(PLOT_DIR, "scvi_fullgene_elbo.pdf"), bbox_inches="tight")
-    plt.close(fig)
-
-    model.save(MODEL_DIR, overwrite=True)
-    log.info("Model saved → %s", MODEL_DIR)
-
-    # ── Latent representation (stored in full adata) ───────────────────────────
-    log.info("Extracting scVI latent embedding ...")
-    # get_latent_representation works on adata_hvg (same cells, HVG counts)
+    # ── Step 4a: scVI latent representation ───────────────────────────────────
+    log.info("Computing scVI latent representation (%d cells) ...", adata.n_obs)
     adata.obsm["X_scVI"] = model.get_latent_representation()
+    log.info("  X_scVI shape: %s", adata.obsm["X_scVI"].shape)
 
-    # ── Neighbours, UMAP, Leiden ──────────────────────────────────────────────
-    log.info("Building neighbourhood graph ...")
+    # ── Step 4b: scANVI latent representation (if model exists) ───────────────
+    if os.path.isdir(SCANVI_DIR):
+        log.info("Loading scANVI model from %s ...", SCANVI_DIR)
+        try:
+            scanvi_model = scvi.model.SCANVI.load(SCANVI_DIR, adata=adata_hvg)
+            log.info("  scANVI model loaded")
+            adata.obsm["X_scANVI"] = scanvi_model.get_latent_representation()
+            log.info("  X_scANVI shape: %s", adata.obsm["X_scANVI"].shape)
+
+            sc.pp.neighbors(adata, use_rep="X_scANVI", n_neighbors=N_NEIGHBOURS,
+                            key_added="scANVI")
+            sc.tl.leiden(adata, neighbors_key="scANVI", resolution=LEIDEN_RES,
+                         key_added="leiden_scANVI")
+            sc.tl.umap(adata, neighbors_key="scANVI")
+            adata.obsm["X_umap_scANVI"] = adata.obsm["X_umap"].copy()
+            log.info("  scANVI clusters: %d", adata.obs["leiden_scANVI"].nunique())
+        except Exception as e:
+            log.warning("  scANVI loading failed (%s) — skipping", e)
+    else:
+        log.info("No scANVI model found at %s — skipping", SCANVI_DIR)
+
+    # ── Step 5: Neighbourhood graph, UMAP, Leiden (from scVI) ─────────────────
+    log.info("Building neighbourhood graph from scVI latent ...")
     sc.pp.neighbors(adata, use_rep="X_scVI", n_neighbors=N_NEIGHBOURS,
                     key_added="scVI")
 
@@ -183,33 +129,27 @@ def main():
     sc.tl.leiden(adata, neighbors_key="scVI", resolution=LEIDEN_RES,
                  key_added="leiden_scVI")
 
-    log.info("Computing UMAP ...")
+    log.info("Computing UMAP from scVI latent ...")
     sc.tl.umap(adata, neighbors_key="scVI")
     adata.obsm["X_umap_scVI"] = adata.obsm["X_umap"].copy()
 
-    n_clusters = adata.obs["leiden_scVI"].nunique()
-    log.info("  Clusters: %d", n_clusters)
+    log.info("  scVI clusters: %d", adata.obs["leiden_scVI"].nunique())
 
-    # ── Transfer existing annotations from integrated annotated object ─────────
-    if not args.skip_annotation_transfer:
-        annot_cols = ["scanvi_Lake_label", "scanvi_Lake_confidence",
-                      "scanvi_MKA_label",  "scanvi_MKA_confidence"]
-        log.info("Transferring annotations from %s ...", ANNOT_H5AD)
-        adata_annot = sc.read_h5ad(ANNOT_H5AD, backed="r")
-        annot_obs   = adata_annot.obs[
-            [c for c in annot_cols if c in adata_annot.obs.columns]
-        ].copy()
-        adata_annot.file.close()
+    # ── Step 6: Transfer annotations from integrated annotated object ──────────
+    annot_cols = ["scanvi_Lake_label", "scanvi_Lake_confidence",
+                  "scanvi_MKA_label",  "scanvi_MKA_confidence",
+                  "leiden_scVI"]
+    log.info("Transferring annotations from %s ...", ANNOT_H5AD)
+    adata_annot = sc.read_h5ad(ANNOT_H5AD, backed="r")
+    available   = [c for c in annot_cols if c in adata_annot.obs.columns]
+    annot_obs   = adata_annot.obs[available].copy()
+    adata_annot.file.close()
 
-        shared = adata.obs_names.intersection(annot_obs.index)
-        log.info("  Shared barcodes: %d / %d", len(shared), adata.n_obs)
-        for col in annot_obs.columns:
-            adata.obs[col] = annot_obs.loc[adata.obs_names, col] \
-                             if len(shared) == adata.n_obs \
-                             else annot_obs.reindex(adata.obs_names)[col]
-        log.info("  Transferred: %s", list(annot_obs.columns))
+    for col in available:
+        adata.obs[col] = annot_obs.reindex(adata.obs_names)[col].values
+    log.info("  Transferred: %s", available)
 
-    # ── UMAP plots ─────────────────────────────────────────────────────────────
+    # ── Step 7: UMAP plots ────────────────────────────────────────────────────
     color_cols = [c for c in [BATCH_KEY, "technology", "condition",
                                "leiden_scVI", "scanvi_Lake_label"]
                   if c in adata.obs.columns]
@@ -220,16 +160,19 @@ def main():
                     bbox_inches="tight", dpi=150)
         plt.close(fig)
 
-    # ── Save ──────────────────────────────────────────────────────────────────
+    # ── Step 8: Save ──────────────────────────────────────────────────────────
     log.info("Saving → %s", OUT_PATH)
     adata.write_h5ad(OUT_PATH)
 
-    log.info("\n===== scVI full-gene integration complete =====")
-    log.info("  Cells          : %d", adata.n_obs)
-    log.info("  Genes (total)  : %d", adata.n_vars)
-    log.info("  HVGs (trained) : %d", n_marked)
-    log.info("  Clusters       : %d", n_clusters)
-    log.info("  Output         : %s", OUT_PATH)
+    log.info("\n===== Complete =====")
+    log.info("  Cells             : %d", adata.n_obs)
+    log.info("  Genes (total)     : %d", adata.n_vars)
+    log.info("  HVGs (model)      : %d", len(hvg_present))
+    log.info("  scVI clusters     : %d", adata.obs["leiden_scVI"].nunique())
+    if "leiden_scANVI" in adata.obs.columns:
+        log.info("  scANVI clusters   : %d", adata.obs["leiden_scANVI"].nunique())
+    log.info("  obsm keys         : %s", list(adata.obsm.keys()))
+    log.info("  Output            : %s", OUT_PATH)
 
 
 if __name__ == "__main__":
