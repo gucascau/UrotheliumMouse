@@ -14,7 +14,6 @@
 suppressPackageStartupMessages({
   library(Seurat)
   library(ggplot2)
-  library(Matrix)
 })
 
 DATA_DIR <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/"
@@ -38,10 +37,6 @@ METADATA_COR_COLS <- c("condition", "sample_id", "technology", "paper", "tissue"
 CLUSTER_COL <- "seurat_clusters"
 MIN_CELLS_PER_LEVEL <- 20
 DROP_CONDITIONS <- c("E9To13.5Gestation", "E18_5_Kidney")
-EXPRESSION_ASSAY <- NULL
-EXPRESSION_LAYER_PRIORITY <- c("data", "counts")
-MIN_GENES_WITH_VARIANCE <- 2
-HEATMAP_CLUSTER_METHOD <- "complete"
 
 dir.create(COR_DIR, showWarnings = FALSE, recursive = TRUE)
 
@@ -114,47 +109,7 @@ plot_association_heatmap <- function(mat, title, out_pdf, out_csv) {
   invisible(p)
 }
 
-cluster_correlation_matrix <- function(mat, method = "complete") {
-  if (nrow(mat) < 2 || ncol(mat) < 2) {
-    return(list(mat = mat, order = colnames(mat), hclust = NULL))
-  }
-
-  mat_for_dist <- mat
-  mat_for_dist[is.na(mat_for_dist)] <- 0
-  mat_for_dist <- pmin(pmax(mat_for_dist, -1), 1)
-
-  dist_mat <- 1 - mat_for_dist
-  diag(dist_mat) <- 0
-  dist_mat <- (dist_mat + t(dist_mat)) / 2
-
-  hc <- hclust(as.dist(dist_mat), method = method)
-  ordered_names <- hc$labels[hc$order]
-  ordered_names <- ordered_names[ordered_names %in% rownames(mat) & ordered_names %in% colnames(mat)]
-
-  list(
-    mat = mat[ordered_names, ordered_names, drop = FALSE],
-    order = ordered_names,
-    hclust = hc
-  )
-}
-
-plot_correlation_heatmap <- function(mat, title, out_pdf, out_csv,
-                                     cluster_rows_cols = TRUE,
-                                     cluster_method = HEATMAP_CLUSTER_METHOD) {
-  if (cluster_rows_cols) {
-    clustered <- cluster_correlation_matrix(mat, method = cluster_method)
-    mat <- clustered$mat
-    order_df <- data.frame(
-      order = seq_along(clustered$order),
-      group = clustered$order,
-      cluster_method = cluster_method,
-      stringsAsFactors = FALSE
-    )
-    write.csv(order_df,
-              sub("\\.csv$", "_cluster_order.csv", out_csv),
-              row.names = FALSE, quote = FALSE)
-  }
-
+  <- function(mat, title, out_pdf, out_csv) {
   write.csv(mat, out_csv, quote = FALSE)
 
   df <- as.data.frame(as.table(mat), stringsAsFactors = FALSE)
@@ -169,18 +124,11 @@ plot_correlation_heatmap <- function(mat, title, out_pdf, out_csv,
   p <- ggplot(df, aes(x = level_x, y = level_y, fill = correlation)) +
     geom_tile(color = "white", linewidth = 0.25) +
     scale_fill_gradient2(
-      low = "#01665e", mid = "white", high = "#8c510a",
+      low = "#8c510a", mid = "white", high = "#01665e",
       midpoint = 0, limits = c(-1, 1), na.value = "grey90"
     ) +
     coord_fixed() +
-    labs(
-      title = if (cluster_rows_cols) {
-        paste0(title, " [hierarchical clustered]")
-      } else {
-        title
-      },
-      x = NULL, y = NULL, fill = "Pearson r"
-    ) +
+    labs(title = title, x = NULL, y = NULL, fill = "Pearson r") +
     theme_minimal(base_size = 11) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, size = axis_text_size),
@@ -200,106 +148,21 @@ plot_correlation_heatmap <- function(mat, title, out_pdf, out_csv,
   invisible(p)
 }
 
-get_assay_layer <- function(so, assay = NULL, layer_priority = c("data", "counts")) {
-  if (is.null(assay)) {
-    assay <- DefaultAssay(so)
-  }
-  available_layers <- Layers(so[[assay]])
-  layer <- intersect(layer_priority, available_layers)[1]
-
-  if (is.na(layer)) {
-    stop(
-      "None of the requested expression layers were found in assay '",
-      assay,
-      "'. Requested: ",
-      paste(layer_priority, collapse = ", "),
-      ". Available: ",
-      paste(available_layers, collapse = ", ")
-    )
-  }
-
-  expr <- GetAssayData(so, assay = assay, layer = layer)
-  list(expr = expr, assay = assay, layer = layer)
-}
-
-average_expression_by_group <- function(expr, meta, group_col, min_cells = 20) {
-  keep <- !is.na(meta[[group_col]])
-  meta_sub <- meta[keep, , drop = FALSE]
-  expr_sub <- expr[, rownames(meta_sub), drop = FALSE]
-
-  group_counts <- sort(table(as.character(meta_sub[[group_col]])), decreasing = TRUE)
-  keep_groups <- names(group_counts[group_counts >= min_cells])
-
-  if (length(keep_groups) < 2) {
-    warning("Skipping average-expression correlation for ", group_col,
-            ": fewer than two levels with at least ", min_cells, " cells.")
-    return(NULL)
-  }
-
-  meta_sub <- meta_sub[as.character(meta_sub[[group_col]]) %in% keep_groups, , drop = FALSE]
-  expr_sub <- expr_sub[, rownames(meta_sub), drop = FALSE]
-
-  group_levels <- keep_groups
-  group_factor <- factor(as.character(meta_sub[[group_col]]), levels = group_levels)
-  group_design <- sparse.model.matrix(~ 0 + group_factor)
-  colnames(group_design) <- group_levels
-
-  group_n <- Matrix::colSums(group_design)
-  avg_expr <- expr_sub %*% group_design
-  avg_expr <- sweep(avg_expr, 2, group_n, "/")
-
-  avg_expr <- as.matrix(avg_expr)
-  gene_sd <- apply(avg_expr, 1, sd, na.rm = TRUE)
-  keep_genes <- is.finite(gene_sd) & gene_sd > 0
-
-  if (sum(keep_genes) < MIN_GENES_WITH_VARIANCE) {
-    warning("Skipping average-expression correlation for ", group_col,
-            ": fewer than ", MIN_GENES_WITH_VARIANCE,
-            " genes vary across groups.")
-    return(NULL)
-  }
-
-  cor_mat <- cor(avg_expr[keep_genes, , drop = FALSE],
-                 method = "pearson",
-                 use = "pairwise.complete.obs")
-
-  list(
-    average_expression = avg_expr,
-    correlation = cor_mat,
-    group_counts = group_n,
-    n_genes_used = sum(keep_genes)
-  )
-}
-
 message("Loading saved Urothelium object: ", RDS_PATH)
 if (!file.exists(RDS_PATH)) {
   stop("Input RDS not found: ", RDS_PATH)
 }
 
 so <- readRDS(RDS_PATH)
-expr_info <- get_assay_layer(
-  so,
-  assay = EXPRESSION_ASSAY,
-  layer_priority = EXPRESSION_LAYER_PRIORITY
-)
-expr <- expr_info$expr
 meta <- so@meta.data
-meta <- meta[colnames(expr), , drop = FALSE]
 rm(so)
 gc()
 
 message("Loaded metadata for ", format(nrow(meta), big.mark = ","), " cells.")
-message(
-  "Using expression assay/layer for average-expression correlations: ",
-  expr_info$assay,
-  "/",
-  expr_info$layer
-)
 
 if ("condition" %in% colnames(meta)) {
   keep <- !(as.character(meta$condition) %in% DROP_CONDITIONS)
   meta <- meta[keep, , drop = FALSE]
-  expr <- expr[, rownames(meta), drop = FALSE]
   message(
     "After dropping developmental conditions (",
     paste(DROP_CONDITIONS, collapse = ", "),
@@ -405,38 +268,6 @@ for (grp in metadata_cols) {
   plot_correlation_heatmap(
     cor_mat,
     paste0(grp, ": correlation of cluster-composition profiles"),
-    file.path(COR_DIR, paste0(prefix, "_correlation_heatmap.pdf")),
-    file.path(COR_DIR, paste0(prefix, "_correlation_matrix.csv"))
-  )
-}
-
-for (grp in metadata_cols) {
-  avg_result <- average_expression_by_group(
-    expr = expr,
-    meta = meta,
-    group_col = grp,
-    min_cells = MIN_CELLS_PER_LEVEL
-  )
-
-  if (is.null(avg_result)) next
-
-  prefix <- paste0("metadata_", safe_filename(grp), "_average_expression")
-
-  write.csv(avg_result$average_expression,
-            file.path(COR_DIR, paste0(prefix, "_matrix.csv")),
-            quote = FALSE)
-  write.csv(data.frame(
-              group = names(avg_result$group_counts),
-              n_cells = as.integer(avg_result$group_counts),
-              n_genes_used_for_correlation = avg_result$n_genes_used,
-              stringsAsFactors = FALSE
-            ),
-            file.path(COR_DIR, paste0(prefix, "_group_summary.csv")),
-            row.names = FALSE, quote = FALSE)
-
-  plot_correlation_heatmap(
-    avg_result$correlation,
-    paste0(grp, ": correlation of average gene-expression profiles"),
     file.path(COR_DIR, paste0(prefix, "_correlation_heatmap.pdf")),
     file.path(COR_DIR, paste0(prefix, "_correlation_matrix.csv"))
   )
