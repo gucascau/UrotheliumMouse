@@ -34,7 +34,7 @@ import os
 import glob
 import logging
 import numpy as np
-import pandas as pd
+import scipy.sparse as sp
 import anndata as ad
 import scanpy as sc
 import scvi
@@ -74,7 +74,7 @@ UNLABELED_CAT         = "Unknown"
 SCANVI_LABEL_MIN_FRAC = 0.01
 
 # Samples to exclude from integration (non-kidney tissue)
-EXCLUDE_SAMPLES = {"BladderHomogenate1", "BladderHomogenate2"}
+EXCLUDE_SAMPLES = set()
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -114,13 +114,20 @@ for path in h5ad_files:
 
     a = sc.read_h5ad(path)
 
-    # scVI requires raw integer counts — skip samples that only have
-    # a normalised data layer (ChenSpatial, LakesnRNA, MKA, KudoUUOUrothelium,
-    # KidneyUUO7, KidneyUUO8).
+    # scVI requires raw integer counts.
+    # zellkonverter stores counts directly in X (no separate layer).
+    # Detect by checking whether X values are all integers; if so, promote
+    # X → layers["counts"].  Log-normalised-only samples are skipped.
     if "counts" not in a.layers:
-        log.info("  [skip – no counts] %s  (%d cells)", sid, a.n_obs)
-        skipped.append((sid, "no counts layer"))
-        continue
+        _x = a.X
+        _data = _x.data if sp.issparse(_x) else _x.ravel()
+        if len(_data) > 0 and np.all(_data == np.floor(_data)):
+            a.layers["counts"] = a.X.copy()
+            log.info("  [counts from X] %s", sid)
+        else:
+            log.info("  [skip – no counts] %s  (%d cells)", sid, a.n_obs)
+            skipped.append((sid, "no counts layer"))
+            continue
 
     # Ensure gsm_id is present; fall back to sample_id for datasets that
     # were not deposited under a GSM accession.
@@ -149,13 +156,10 @@ adata = ad.concat(
     adatas,
     join        = "outer",
     merge       = "same",   # keep obs/var columns that are identical across all
-    label       = BATCH_KEY,
-    keys        = [a.obs[BATCH_KEY].iloc[0] for a in adatas],
     index_unique= "-",
 )
 
 # Fill NaN counts (from outer join on missing genes) with 0
-import scipy.sparse as sp
 for layer in list(adata.layers.keys()):
     if sp.issparse(adata.layers[layer]):
         adata.layers[layer].data = np.nan_to_num(adata.layers[layer].data)
@@ -222,40 +226,45 @@ scvi.model.SCVI.setup_anndata(
 # STEP 5: Train scVI
 ###############################################################################
 
-model = scvi.model.SCVI(
-    adata_hvg,
-    n_latent        = N_LATENT,
-    n_layers        = N_LAYERS,
-    n_hidden        = N_HIDDEN,
-    gene_likelihood = "nb",
-    dispersion      = "gene-batch",
-)
-log.info("Model:\n%s", model)
+_model_pt = os.path.join(SCVI_MODEL, "model.pt")
+if os.path.exists(_model_pt):
+    log.info("scVI model checkpoint found — loading from %s (skipping training)", SCVI_MODEL)
+    model = scvi.model.SCVI.load(SCVI_MODEL, adata=adata_hvg)
+else:
+    model = scvi.model.SCVI(
+        adata_hvg,
+        n_latent        = N_LATENT,
+        n_layers        = N_LAYERS,
+        n_hidden        = N_HIDDEN,
+        gene_likelihood = "nb",
+        dispersion      = "gene-batch",
+    )
+    log.info("Model:\n%s", model)
 
-model.train(
-    max_epochs              = N_EPOCHS,
-    batch_size              = BATCH_SIZE,
-    early_stopping          = True,
-    early_stopping_patience = 20,
-    plan_kwargs             = {"lr": LR},
-    accelerator             = "gpu" if device == "cuda" else "cpu",
-)
+    model.train(
+        max_epochs              = N_EPOCHS,
+        batch_size              = BATCH_SIZE,
+        early_stopping          = True,
+        early_stopping_patience = 20,
+        plan_kwargs             = {"lr": LR},
+        accelerator             = "gpu" if device == "cuda" else "cpu",
+    )
 
-# ELBO training curve
-hist       = model.history
-elbo_train = hist["elbo_train"]
-elbo_val   = hist.get("elbo_validation", None)
-fig, ax = plt.subplots(figsize=(7, 4))
-ax.plot(elbo_train.index, elbo_train["elbo_train"], label="train ELBO")
-if elbo_val is not None:
-    ax.plot(elbo_val.index, elbo_val["elbo_validation"], label="val ELBO")
-ax.set_xlabel("Epoch"); ax.set_ylabel("ELBO"); ax.legend()
-ax.set_title("scVI training ELBO")
-fig.savefig(os.path.join(PLOT_DIR, "scvi_elbo.pdf"), bbox_inches="tight")
-plt.close(fig)
+    # ELBO training curve
+    hist       = model.history
+    elbo_train = hist["elbo_train"]
+    elbo_val   = hist.get("elbo_validation", None)
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.plot(elbo_train.index, elbo_train["elbo_train"], label="train ELBO")
+    if elbo_val is not None:
+        ax.plot(elbo_val.index, elbo_val["elbo_validation"], label="val ELBO")
+    ax.set_xlabel("Epoch"); ax.set_ylabel("ELBO"); ax.legend()
+    ax.set_title("scVI training ELBO")
+    fig.savefig(os.path.join(PLOT_DIR, "scvi_elbo.pdf"), bbox_inches="tight")
+    plt.close(fig)
 
-model.save(SCVI_MODEL, overwrite=True)
-log.info("scVI model saved → %s", SCVI_MODEL)
+    model.save(SCVI_MODEL, overwrite=True)
+    log.info("scVI model saved → %s", SCVI_MODEL)
 
 
 ###############################################################################
@@ -285,9 +294,10 @@ adata_hvg.obsm["X_umap_scVI"] = adata_hvg.obsm["X_umap"].copy()
 run_scanvi = False
 
 if CELL_TYPE_KEY is not None and CELL_TYPE_KEY in adata_hvg.obs.columns:
-    adata_hvg.obs[CELL_TYPE_KEY] = (
-        adata_hvg.obs[CELL_TYPE_KEY].fillna(UNLABELED_CAT).astype(str)
-    )
+    col = adata_hvg.obs[CELL_TYPE_KEY]
+    if hasattr(col, "cat") and UNLABELED_CAT not in col.cat.categories:
+        col = col.cat.add_categories(UNLABELED_CAT)
+    adata_hvg.obs[CELL_TYPE_KEY] = col.fillna(UNLABELED_CAT).astype(str)
     n_labelled    = (adata_hvg.obs[CELL_TYPE_KEY] != UNLABELED_CAT).sum()
     frac_labelled = n_labelled / adata_hvg.n_obs
     log.info("Labelled cells for scANVI: %d / %d (%.1f %%)",

@@ -1,4 +1,38 @@
-*.gz
+# ── Data directories (large files, not tracked in git) ───────────────────────
+RenalUrothelium/
+BladderUrothelium/
+UreterUrothlium/
+Annotation/
+RawDatasets/
+integration_output/
+qc_h5ad/
+qc_plots/
+seurat_objects/
+reference/
+logs/
+
+# ── Data file types ───────────────────────────────────────────────────────────
+*.h5ad
 *.rds
-*.txt
+*.gz
+*.mtx
+*.loom
+
+# ── Tabular data (symlinked GEO files, large count matrices) ─────────────────
 *.csv
+*.tsv
+*.txt
+
+# ── SLURM logs ────────────────────────────────────────────────────────────────
+*.err
+*.out
+
+# ── Plot outputs ──────────────────────────────────────────────────────────────
+*.pdf
+*.png
+*.svg
+
+# ── Python cache ──────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
