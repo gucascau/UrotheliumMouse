@@ -5,12 +5,12 @@
 #
 # Input
 # -----
-#   output/RenalUrothelium_experimental_fullgene.h5ad  (139k cells × ~25k genes)
+#   output/RenalUrothelium_allcells_fullgene.h5ad  (1.1M cells × ~25k genes)
 #   output/RenalUrothelium_integrated_annotated.rds    (for UMAP reductions)
 #
 # Output
 # ------
-#   output/RenalUrothelium_experimental_fullgene.rds
+#   output/RenalUrothelium_allcells_fullgene.rds
 #     counts slot  — raw integer counts (~25k genes)
 #     data   slot  — log-normalised expression
 #     All metadata columns from integrated object
@@ -22,15 +22,16 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
-BASE_DIR   <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells"
+BASE_DIR   <- paste0("/vast0/home/gdjacksonlab/lab/xxw004/UUO/",
+                     "Datasets/Mouse/UsedSingleCells")
 SCRIPT_DIR <- file.path(BASE_DIR, "RenalUrotheliumScripts")
 OUT_DIR    <- file.path(SCRIPT_DIR, "output")
 
-H5AD_IN    <- file.path(OUT_DIR, "RenalUrothelium_experimental_fullgene.h5ad")
+H5AD_IN    <- file.path(OUT_DIR, "RenalUrothelium_allcells_fullgene.h5ad")
 INT_RDS    <- file.path(OUT_DIR, "RenalUrothelium_integrated_annotated.rds")
-RDS_OUT    <- file.path(OUT_DIR, "RenalUrothelium_experimental_fullgene.rds")
+RDS_OUT    <- file.path(OUT_DIR, "RenalUrothelium_allcells_fullgene.rds")
 
-# ── Read full-gene h5ad ────────────────────────────────────────────────────────
+# ── Read full-gene h5ad ───────────────────────────────────────────────────────
 cat("Reading", H5AD_IN, "\n")
 sce <- readH5AD(H5AD_IN, use_hdf5 = FALSE)
 cat("  SCE dims:", nrow(sce), "genes ×", ncol(sce), "cells\n")

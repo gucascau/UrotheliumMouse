@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
 """
 10_build_fullgene_h5ad.py — Build a full-transcriptome (~25k gene) h5ad for
-experimental cells only, without re-running the integration pipeline.
+ALL 1.1M cells (experimental + reference atlases), without re-running the
+integration pipeline.
 
 Strategy
 --------
   1. Load obs + reductions from the integrated annotated h5ad (backed, no X).
-  2. Keep only the 14 experimental samples (exclude reference atlases).
-  3. For each sample, fetch raw counts for ALL genes from the original h5ad.
-  4. Concatenate with outer join (missing genes in any sample → 0).
-  5. Normalise per cell (normalize_total + log1p) → store in layers["lognorm"].
-  6. Transfer metadata and UMAP embeddings from the integrated object.
-  7. Save as output/RenalUrothelium_experimental_fullgene.h5ad.
+  2. For each source, fetch raw counts for ALL genes from the original h5ad.
+  3. Concatenate with outer join (missing genes in any source → 0).
+  4. Normalise per cell (normalize_total + log1p) → store in layers["lognorm"].
+  5. Transfer metadata and UMAP embeddings from the integrated object.
+  6. Save as output/RenalUrothelium_allcells_fullgene.h5ad.
+
+Memory warning
+--------------
+  UUOProjectObject_F.h5ad is 44 GB on disk (~100–150 GB in RAM).
+  All sources combined peak at ~300–400 GB RAM.
+  Run on a himem node with at least 500 G (1300 G recommended).
 
 This h5ad can then be converted to a Seurat RDS by 10b_convert_fullgene_to_rds.R
 which also transfers the scVI/scANVI UMAP reductions.
 
 Output
 ------
-  output/RenalUrothelium_experimental_fullgene.h5ad
+  output/RenalUrothelium_allcells_fullgene.h5ad
     layers["counts"]   — raw integer counts (~25k genes)
     layers["lognorm"]  — log-normalised (normalize_total 10k + log1p)
     X                  — same as lognorm (scanpy default)
@@ -41,17 +47,7 @@ DATA_DIR   = os.path.join(BASE_DIR, "RenalUrothelium")
 SCRIPT_DIR = os.path.join(BASE_DIR, "RenalUrotheliumScripts")
 OUT_DIR    = os.path.join(SCRIPT_DIR, "output")
 ANNOT_H5AD = os.path.join(OUT_DIR, "RenalUrothelium_integrated_annotated.h5ad")
-OUT_PATH   = os.path.join(OUT_DIR, "RenalUrothelium_experimental_fullgene.h5ad")
-
-# ── Experimental samples ───────────────────────────────────────────────────────
-EXPERIMENTAL_SOURCES = {
-    "KidneyHealthy1", "KidneyHealthy2", "KidneyHealthy3",
-    "KidneyHealthy4", "KidneyHealthy5",
-    "KidneyTET2UUO",
-    "KidneyUUO1",  "KidneyUUO2",  "KidneyUUO3",  "KidneyUUO4",
-    "KidneyUUO5",  "KidneyUUO6",  "KidneyUUO7",  "KidneyUUO8",
-    "KidneyrUUO1",
-}
+OUT_PATH   = os.path.join(OUT_DIR, "RenalUrothelium_allcells_fullgene.h5ad")
 
 # UMAP and reduction keys to carry over from the integrated object
 OBSM_KEYS = ["X_scVI", "X_scANVI", "X_umap_scVI", "X_umap_scANVI", "X_umap"]
@@ -143,10 +139,9 @@ def main():
 
     adata_int.file.close()
 
-    # Filter to experimental cells
-    exp_mask = obs_int["source"].isin(EXPERIMENTAL_SOURCES)
-    obs_exp  = obs_int[exp_mask].copy()
-    print(f"  Experimental cells: {len(obs_exp):,} / {len(obs_int):,}")
+    # All cells (experimental + reference atlases)
+    obs_exp  = obs_int.copy()
+    print(f"  Total cells: {len(obs_exp):,}")
 
     # Strip batch suffix to recover original barcodes
     obs_exp["_orig_bc"] = obs_exp.index.str.rsplit("-", n=1).str[0]
