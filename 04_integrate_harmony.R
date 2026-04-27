@@ -1,21 +1,16 @@
 ################################################################################
 # Script 04: Harmony Integration
 #
-# Reads the merged + log-normalized object written by 03_integrate_harmony.R
-# (merged_normalized.rds) and the companion HVG list (hvg_list.rds), then runs:
-#   1. Restore HVG selection
-#   2. JoinLayers  — collapse per-sample layers into one matrix
-#   3. ScaleData   — regress out pct_mt
-#   4. RunPCA      — 50 PCs on HVGs
+# Resumes from the PCA checkpoint written by a prior run (Integrated_ScaledPCA.rds)
+# and continues with:
 #   5. RunHarmony  — batch correction by sample_id + technology
 #   6. FindNeighbors / FindClusters
 #   7. RunUMAP
 #   8. Visualize
 #   9. Save merged_harmony_integrated.rds
 #
-# Run AFTER 03_integrate_harmony.R has written:
-#   integration_output/merged_normalized.rds
-#   integration_output/hvg_list.rds
+# Requires:
+#   integration_output/Integrated_ScaledPCA.rds   (ScaleData + RunPCA already done)
 ################################################################################
 
 library(Seurat)
@@ -39,8 +34,6 @@ DATA_DIR <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCe
 OUT_DIR  <- file.path(DATA_DIR, "integration_output")
 dir.create(OUT_DIR, showWarnings = FALSE)
 
-NORM_PATH <- file.path(OUT_DIR, "merged_normalized.rds")
-HVG_PATH  <- file.path(OUT_DIR, "hvg_list.rds")
 OUT_PATH  <- file.path(OUT_DIR, "merged_harmony_integrated.rds")
 
 # ── Parameters ────────────────────────────────────────────────────────────────
@@ -51,110 +44,100 @@ RESOLUTION   <- 0.5
 
 
 ################################################################################
-# STEP 1: Load merged normalized object + HVG list
+# STEP 1-4: Load PCA checkpoint (ScaleData + PCA already done)
 ################################################################################
 
-for (p in c(NORM_PATH, HVG_PATH)) {
-  if (!file.exists(p))
-    stop("Required file not found: ", p,
-         "\nRun 03_integrate_harmony.R first.")
+PCA_PATH <- file.path(OUT_DIR, "Integrated_ScaledPCA.rds")
+if (!file.exists(PCA_PATH))
+  stop("Checkpoint not found: ", PCA_PATH,
+       "\nRun steps 1-4 first (ScaleData + RunPCA).")
+
+message("Loading PCA checkpoint...")
+merged <- readRDS(PCA_PATH)
+message(sprintf("  Loaded: %d cells × %d genes", ncol(merged), nrow(merged)))
+message(sprintf("  PCA dims: %s", paste(dim(Embeddings(merged, "pca")), collapse = " × ")))
+log_mem("after checkpoint load")
+
+# Drop scale.data if still present to free RAM before Harmony
+if (!is.null(merged[["RNA"]]$scale.data)) {
+  merged[["RNA"]][["scale.data"]] <- NULL
+  gc()
+  log_mem("after scale.data freed")
 }
 
-message("Loading merged normalized object...")
-merged <- readRDS(NORM_PATH)
-message(sprintf("  Loaded: %d cells × %d genes", ncol(merged), nrow(merged)))
-message(sprintf("  Layers: %s", paste(Layers(merged), collapse = ", ")))
-log_mem("after load")
-
-message("Loading HVG list...")
-hvg_obj <- readRDS(HVG_PATH)
-VariableFeatures(merged) <- hvg_obj$hvg
-message(sprintf("  HVGs restored: %d", length(VariableFeatures(merged))))
-rm(hvg_obj); gc()
-
 
 ################################################################################
-# STEP 2: JoinLayers
+# STEP 5: RunHarmony  (skipped if checkpoint exists)
 ################################################################################
 
-message("JoinLayers — collapsing per-sample layers...")
-merged <- JoinLayers(merged)
-message(sprintf("  Layers after join: %s",
-                paste(Layers(merged), collapse = ", ")))
-log_mem("after JoinLayers")
+HARMONY_CHECKPOINT <- file.path(OUT_DIR, "harmony_embeddings.rds")
 
-
-################################################################################
-# STEP 3: ScaleData
-################################################################################
-
-message("ScaleData (regress pct_mt, HVGs only)...")
-merged <- ScaleData(merged,
-                    features        = VariableFeatures(merged),
-                    vars.to.regress = "pct_mt",
-                    verbose         = FALSE)
-message("  ScaleData done")
-log_mem("after ScaleData")
-
-
-################################################################################
-# STEP 4: RunPCA
-################################################################################
-
-message(sprintf("RunPCA (%d PCs)...", N_PCS))
-merged <- RunPCA(merged, npcs = N_PCS, verbose = FALSE)
-message("  PCA done")
-
-# save into the Seurat object for later checkpointing — allows re-running FindNeighbors/UMAP
-saveRDS(merged,
-        file.path(OUT_DIR, "Integrated_ScaledPCA.rds"))
-
-# scale.data is dense (HVGs × 2.8M cells, ~69 GB) — only needed for RunPCA.
-# Drop it immediately to free RAM before Harmony + FindNeighbors.
-merged[["RNA"]]$scale.data <- NULL
-gc()
-log_mem("after PCA + scale.data freed")
-
-
-################################################################################
-# STEP 5: RunHarmony
-################################################################################
-
-message(sprintf("RunHarmony (batch = %s)...",
-                paste(HARMONY_VARS, collapse = " + ")))
-# suppressWarnings: silences k-means "Quick-TRANSfer" non-convergence warnings
-# at 2.8M cells — Harmony still converges correctly.
-suppressWarnings(
-  merged <- RunHarmony(
-    object         = merged,
-    group.by.vars  = HARMONY_VARS,
-    reduction      = "pca",
-    reduction.save = "harmony",
-    max_iter       = 20,
-    verbose        = FALSE
+if (file.exists(HARMONY_CHECKPOINT)) {
+  message("Harmony checkpoint found — loading embeddings, skipping RunHarmony...")
+  harmony_mat <- readRDS(HARMONY_CHECKPOINT)
+  merged[["harmony"]] <- CreateDimReducObject(
+    embeddings = harmony_mat,
+    key        = "harmony_",
+    assay      = DefaultAssay(merged)
   )
-)
-message("  Harmony done")
-log_mem("after Harmony")
+  rm(harmony_mat); gc()
+  log_mem("after loading Harmony checkpoint")
+} else {
+  message(sprintf("RunHarmony (batch = %s)...",
+                  paste(HARMONY_VARS, collapse = " + ")))
+  pca_mat <- Embeddings(merged, "pca")
+  harmony_mat <- suppressWarnings(
+    harmony::HarmonyMatrix(
+      data_mat          = pca_mat,
+      meta_data         = merged@meta.data,
+      vars_use          = HARMONY_VARS,
+      do_pca            = FALSE,
+      max.iter.harmony  = 20,
+      verbose           = FALSE
+    )
+  )
+  merged[["harmony"]] <- CreateDimReducObject(
+    embeddings = harmony_mat,
+    key        = "harmony_",
+    assay      = DefaultAssay(merged)
+  )
+  rm(pca_mat, harmony_mat); gc()
+  message("  Harmony done")
+  log_mem("after Harmony")
 
-# Checkpoint: save Harmony embedding so FindNeighbors/UMAP can be rerun
-# without repeating the 4-hour ScaleData + PCA + Harmony steps.
-saveRDS(Embeddings(merged, "harmony"),
-        file.path(OUT_DIR, "harmony_embeddings.rds"))
-message("  Harmony embedding checkpoint saved")
+  saveRDS(Embeddings(merged, "harmony"), HARMONY_CHECKPOINT)
+  message("  Harmony embedding checkpoint saved")
+}
+
+# Replace the RNA assay with a 1-gene placeholder to free all expression data
+# (~80-100 GB) before building the annoy index for 2.8M cells.
+# Seurat v5 Assay5 forbids removing its last layer, so rebuilding is the only
+# way to guarantee a full drop of counts + data + scale.data in one step.
+cell_names  <- colnames(merged)
+empty_mat   <- Matrix::sparseMatrix(
+  i = 1L, j = seq_along(cell_names),
+  x = 0, dims = c(1L, length(cell_names)),
+  dimnames = list("placeholder", cell_names)
+)
+merged[["RNA"]] <- CreateAssay5Object(counts = empty_mat)
+rm(empty_mat, cell_names)
+merged[["pca"]] <- NULL
+gc()
+log_mem("after stripping assay data for FindNeighbors")
 
 ################################################################################
 # STEP 6: FindNeighbors + FindClusters
 ################################################################################
 
-message("FindNeighbors (annoy, k=15)...")
-# annoy: approximate NN — far lower peak memory than exact NN for 2.8M cells
+message("FindNeighbors (annoy, k=5)...")
 merged <- FindNeighbors(
   merged,
   reduction = "harmony",
   dims      = HARMONY_DIMS,
   nn.method = "annoy",
-  k.param   = 15,
+  k.param   = 5,
+  annoy.metric = "euclidean",
+  n.trees   = 50,
   verbose   = FALSE
 )
 log_mem("after FindNeighbors")
