@@ -8,6 +8,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --partition=himem
 
+
 SCRIPT_DIR="/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/RenalUrotheliumScripts"
 
 mkdir -p "${SCRIPT_DIR}/logs"
@@ -36,7 +37,7 @@ echo ""
 
 # ── Load R environment ────────────────────────────────────────────────────────
 module purge
-module load GCC/9.3.0 OpenMPI/4.0.3 R/4.4.0
+module load GCC/9.3.0 OpenMPI/4.0.3 OpenBLAS/0.3.9 R/4.4.0
 
 # Prepend newer libstdc++ so zellkonverter/basilisk finds GLIBCXX_3.4.29
 export LD_LIBRARY_PATH=/gpfs0/export/apps/easybuild/software/GCCcore/12.3.0/lib64:${LD_LIBRARY_PATH}
