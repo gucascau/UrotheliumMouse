@@ -3,15 +3,18 @@
 03_extract_renal_epithelial.py — Subset the preprocessed AnnData to renal
 epithelial cells using a two-pass hybrid strategy:
 
-  Pass 1 (annotation)  — match cell_type_original against known label sets
-  Pass 2 (markers)     — for cells without a recognised label, score against
-                         per-compartment marker gene panels and assign any
-                         cell whose top-scoring compartment exceeds MIN_SCORE
+  Pass 1 (annotation)  — use scANVI-predicted labels from two reference atlases
+                         (scanvi_Lake_label, scanvi_MKA_label); a cell is
+                         assigned if EITHER predicts an epithelial type
+  Pass 2 (markers)     — for cells not predicted as epithelial by either
+                         reference, score against per-compartment marker gene
+                         panels and assign any cell whose top-scoring
+                         compartment exceeds MIN_SCORE
 
 Four compartments:
   Tubule               — proximal tubule, loop of Henle, distal convoluted
-                         tubule, connecting tubule, nephron progenitors
-  Urothelium           — urothelial / transitional epithelium
+                         tubule, connecting tubule
+  Urothelium           — urothelial / papillary epithelium
   Collecting_duct      — principal cells, intercalated cells A/B
   Glomerular_epithelial— podocytes, parietal epithelial cells (PEC)
 
@@ -19,63 +22,53 @@ Outputs
 -------
   output/RenalUrothelium_renal_epithelial.h5ad
     obs column  epithelial_compartment : compartment name
-    obs column  assign_method          : "annotation" | "marker_score"
+    obs column  assign_method          : "annotation_Lake" | "annotation_MKA"
+                                         | "annotation_both" | "marker_score"
 """
 
 import os
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import scipy.sparse as sp
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR   = "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells"
 SCRIPT_DIR = os.path.join(BASE_DIR, "RenalUrotheliumScripts")
 OUT_DIR    = os.path.join(SCRIPT_DIR, "output")
 
-IN_PATH  = os.path.join(OUT_DIR, "RenalUrothelium_integrated.h5ad")
+IN_PATH  = os.path.join(OUT_DIR, "RenalUrothelium_integrated_annotated.h5ad")
 OUT_PATH = os.path.join(OUT_DIR, "RenalUrothelium_renal_epithelial.h5ad")
 
 # ── Score threshold for marker-based pass ────────────────────────────────────
 # sc.tl.score_genes returns a z-score–like value; 0.0 is a conservative floor
 MIN_SCORE = 0.0
 
-# ── Annotation labels per compartment ────────────────────────────────────────
-COMPARTMENT_LABELS = {
+# ── Annotation label sets — curated from scanvi_Lake_label / scanvi_MKA_label ─
+LAKE_COMPARTMENT_LABELS = {
     "Tubule": {
-        # Proximal tubule — all segment nomenclatures across datasets
-        "PTS1", "PTS2", "PTS3", "PTS3T2",
-        "PT(S1)", "PT(S2)", "PT(S3)", "PT(S1-S2)", "PT",
-        "Dediff. PT", "Prolif. PT",
-        # Distal convoluted tubule
-        "DCT", "DCT-CNT",
-        # Connecting tubule
-        "CNT",
-        # Loop of Henle (all segments)
-        "LOH", "LOH_AL", "LOH_DL", "LOH_AL_proliferating",
-        "MTAL", "CTAL", "TAL",
-        "LH(AL)", "LH(DL)",
-        "DTL", "DTL-ATL", "ATL",
-        # Distal tubule shorthand used in some datasets
-        "D1", "D2",
-        # Macula densa (specialised TAL epithelial)
-        "MD",
-        # Nephron / ureteric-bud progenitors
-        "NP", "NP_proliferate", "UBP",
-    },
-    "Urothelium": {
-        "Urotherlium",   # typo present in source dataset
-        "Uro",
+        "PT", "DCT", "DTL", "TAL", "ATL", "CNT", "PapE",
     },
     "Collecting_duct": {
-        "CD_PC", "CD-PC", "CD_PC_Mix", "CD-Trans",
-        "CD_IC",
-        "IC", "IC-A", "IC-B", "ICA", "ICB",
-        "PC",
+        "PC", "IC",
     },
     "Glomerular_epithelial": {
-        "Podo", "Pod",   # podocytes
-        "PEC",           # parietal epithelial cells
+        "PEC", "POD",
+    },
+}
+
+MKA_COMPARTMENT_LABELS = {
+    "Tubule": {
+        "PTS1", "PTS2", "PTS3", "PTS3T2",
+        "DCT", "DCT-CNT", "CNT",
+        "MTAL", "CTAL",
+        "DTL", "ATL", "DTL-ATL",
+        "LOH", "MD",
+    },
+    "Collecting_duct": {
+        "PC", "ICA", "ICB", "CD-Trans",
+    },
+    "Glomerular_epithelial": {
+        "Podo", "PEC",
     },
 }
 
@@ -112,14 +105,13 @@ COMPARTMENT_MARKERS = {
     ],
 }
 
-COMPARTMENT_ORDER = ["Tubule", "Urothelium",
-                     "Collecting_duct", "Glomerular_epithelial"]
+COMPARTMENT_ORDER = ["Tubule", "Urothelium", "Collecting_duct", "Glomerular_epithelial"]
 
-# Reverse lookup: label → compartment
-LABEL_TO_COMPARTMENT = {
-    lbl: comp
-    for comp, labels in COMPARTMENT_LABELS.items()
-    for lbl in labels
+LAKE_LABEL_TO_COMPARTMENT = {
+    lbl: comp for comp, labels in LAKE_COMPARTMENT_LABELS.items() for lbl in labels
+}
+MKA_LABEL_TO_COMPARTMENT = {
+    lbl: comp for comp, labels in MKA_COMPARTMENT_LABELS.items() for lbl in labels
 }
 
 
@@ -131,20 +123,40 @@ print(f"Loading {IN_PATH} ...")
 adata = sc.read_h5ad(IN_PATH)
 print(f"  Total: {adata.n_obs:,} cells × {adata.n_vars:,} genes")
 
-if "cell_type_original" not in adata.obs.columns:
-    raise KeyError("'cell_type_original' column not found in adata.obs")
+for col in ("scanvi_Lake_label", "scanvi_MKA_label"):
+    if col not in adata.obs.columns:
+        raise KeyError(f"'{col}' column not found in adata.obs")
 
-ct = adata.obs["cell_type_original"].astype(str)
+ct_lake = adata.obs["scanvi_Lake_label"].astype(str)
+ct_mka  = adata.obs["scanvi_MKA_label"].astype(str)
 
 
 ###############################################################################
 # Pass 1 — annotation-based assignment
 ###############################################################################
 
-print("\n=== Pass 1: annotation-based ===")
-compartment_col = ct.map(LABEL_TO_COMPARTMENT)   # NaN for unmatched cells
+print("\n=== Pass 1: annotation-based (Lake + MKA scANVI predictions) ===")
+
+lake_comp = ct_lake.map(LAKE_LABEL_TO_COMPARTMENT)   # NaN if not epithelial in Lake
+mka_comp  = ct_mka.map(MKA_LABEL_TO_COMPARTMENT)    # NaN if not epithelial in MKA
+
+# Include cell if EITHER annotation predicts epithelial; Lake takes priority on conflict
+compartment_col = lake_comp.combine_first(mka_comp)
+
+# Track which reference(s) drove the assignment
+method_annot = pd.Series("", index=adata.obs_names)
+method_annot[lake_comp.notna() & mka_comp.isna()]  = "annotation_Lake"
+method_annot[lake_comp.isna()  & mka_comp.notna()] = "annotation_MKA"
+method_annot[lake_comp.notna() & mka_comp.notna()]  = "annotation_both"
+
+n_lake  = (method_annot == "annotation_Lake").sum()
+n_mka   = (method_annot == "annotation_MKA").sum()
+n_both  = (method_annot == "annotation_both").sum()
 n_annot = compartment_col.notna().sum()
-print(f"  Cells assigned by annotation: {n_annot:,}")
+print(f"  Lake only        : {n_lake:,}")
+print(f"  MKA only         : {n_mka:,}")
+print(f"  Both (Lake wins) : {n_both:,}")
+print(f"  Total assigned   : {n_annot:,}")
 
 
 ###############################################################################
@@ -189,13 +201,12 @@ print(marker_compartment.value_counts().to_string())
 # Merge both passes
 ###############################################################################
 
-# Start with annotation pass; fill gaps with marker pass
+# Fill annotation gaps with marker-based assignments
 merged = compartment_col.copy()
 merged[unannotated_mask] = marker_compartment.values
 
-# Record assignment method
-method = pd.Series("", index=adata.obs_names)
-method[compartment_col.notna()]                                    = "annotation"
+# Final method column: annotation source or marker_score
+method = method_annot.copy()
 method[unannotated_mask & pd.notna(pd.Series(marker_compartment.values,
                                               index=adata.obs_names[unannotated_mask]))] = "marker_score"
 
@@ -218,8 +229,11 @@ print(adata.obs.loc[final_mask, "epithelial_compartment"].value_counts().to_stri
 print("\n  Assignment method breakdown:")
 print(adata.obs.loc[final_mask, "assign_method"].value_counts().to_string())
 
-print("\n  Cells per cell_type_original (selected):")
-print(adata.obs.loc[final_mask, "cell_type_original"].value_counts().to_string())
+print("\n  scanvi_Lake_label breakdown (selected):")
+print(adata.obs.loc[final_mask, "scanvi_Lake_label"].value_counts().to_string())
+
+print("\n  scanvi_MKA_label breakdown (selected):")
+print(adata.obs.loc[final_mask, "scanvi_MKA_label"].value_counts().to_string())
 
 if "condition" in adata.obs.columns:
     print("\n  Cells per condition:")

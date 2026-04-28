@@ -29,25 +29,65 @@ if (length(missing_assays) > 0) {
        ". Expected AnnData layers['counts'] and layers['lognorm'].")
 }
 
+
 cat("Converting SCE → Seurat ...\n")
 so <- as.Seurat(sce, counts = "counts", data = "lognorm")
 
-# Transfer dimensional reductions
-for (red in c("X_scVI", "X_scANVI", "X_umap_scVI", "X_umap_scANVI", "X_umap")) {
-  if (red %in% reducedDimNames(sce)) {
-    key    <- sub("^X_", "", red)
-    emb    <- reducedDim(sce, red)
-    so[[key]] <- CreateDimReducObject(
-      embeddings = emb,
-      key        = paste0(gsub("_", "", key), "_"),
-      assay      = DefaultAssay(so)
-    )
-    cat("  Added reduction:", key, "\n")
-  }
-}
+# Check structure
+so
+
+# Check counts
+GetAssayData(so, layer = "counts")[1:5,1:5]
+
+# Check normalized data
+GetAssayData(so, layer = "data")[1:5,1:5]
+
+# Check metadata
+head(so@meta.data)
+
+# Check embeddings
+Reductions(so)
+Embeddings(so, "X_umap")[1:5,]
+
+
+
+
+# # Transfer dimensional reductions
+# for (red in c("X_scVI", "X_scANVI", "X_umap_scVI", "X_umap_scANVI", "X_umap")) {
+#   if (red %in% reducedDimNames(sce)) {
+#     key    <- sub("^X_", "", red)
+#     emb    <- reducedDim(sce, red)
+#     so[[key]] <- CreateDimReducObject(
+#       embeddings = emb,
+#       key        = paste0(gsub("_", "", key), "_"),
+#       assay      = DefaultAssay(so)
+#     )
+#     cat("  Added reduction:", key, "\n")
+#   }
+# }
+
+# Rename to "RNA"
+so[["RNA"]] <- so[["originalexp"]]
+DefaultAssay(so) <- "RNA"
+so[["originalexp"]] <- NULL
+
 
 cat("Saving to", rds_path, "\n")
 saveRDS(so, rds_path)
 cat("Done.\n")
 cat("  Cells:", ncol(so), "\n")
 cat("  Genes:", nrow(so), "\n")
+
+DefaultAssay(so)
+
+# Check structure
+so
+
+# Check layers
+Layers(so)
+
+# Check metadata
+head(so@meta.data)
+
+# Check UMAP
+DimPlot(so, reduction = "X_umap")
