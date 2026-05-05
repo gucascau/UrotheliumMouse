@@ -146,7 +146,6 @@ message("  PCA done")
 log_mem("after PCA")
 
 so[["RNA"]]$counts     <- NULL
-so[["RNA"]]$data       <- NULL
 so[["RNA"]]$scale.data <- NULL
 gc()
 log_mem("after freeing expression data")
@@ -242,13 +241,6 @@ print(wrap_plots(overview_plots, ncol = n_cols))
 dev.off()
 message("  Saved: RenalEpithelial_UMAP_overview.pdf")
 
-# Per-compartment marker FeaturePlots — restore data layer temporarily
-message("Restoring data layer for marker feature plots ...")
-so_tmp <- readRDS(IN_PATH)
-so[["RNA"]]$data <- so_tmp[["RNA"]]$counts
-rm(so_tmp)
-gc()
-
 for (comp in names(MARKERS)) {
   genes   <- intersect(MARKERS[[comp]], rownames(so))
   missing <- setdiff(MARKERS[[comp]], rownames(so))
@@ -267,7 +259,6 @@ for (comp in names(MARKERS)) {
   message(sprintf("  Saved: RenalEpithelial_markers_%s.pdf", comp))
 }
 
-so[["RNA"]]$data <- NULL
 gc()
 
 

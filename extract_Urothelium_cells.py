@@ -2,11 +2,19 @@
 """
 Strictly extract urothelial cells from scvi_qc_integrated.h5ad.
 
-Filtering logic mirrors the requested Seurat-style rule:
+Filtering logic (three-arm OR gate):
 
-  Epcam > 0
-  AND at least one of Upk1a / Upk1b / Upk2 / Upk3a > 0
-  AND KidneyEpiScore1 < 0.1
+  (any of Upk1a/Upk1b/Upk2/Upk3a/Upk3b > 0                    [umbrella arm]
+   OR ≥2 of Krt5/Krt14/Trp63 > 0                               [basal arm]
+   OR Epcam > 0 AND Krt7 > 0 AND Krt8 > 0 AND any of Foxa1/Gata3 > 0) [intermediate arm]
+  AND KidneyEpiScore1 < 0.2
+
+Arm rationale:
+  umbrella    — UPK marks differentiated superficial cells
+  basal       — ≥2/3 (not all-3) tolerates scRNA-seq dropout in Krt5/Krt14/Trp63
+  intermediate — Foxa1/Gata3 are urothelial master TFs absent from all kidney
+                 tubular epithelial lineages; combined with Epcam this is highly
+                 specific and recovers cells between basal and umbrella layers
 
 KidneyEpiScore1 is computed with scanpy.tl.score_genes using kidney epithelial
 exclusion markers, similar in spirit to Seurat AddModuleScore.
@@ -37,13 +45,16 @@ out_path   = os.path.join(base_dir, "integration_output", "Urothelium_cells.h5ad
 
 # ── Marker genes ──────────────────────────────────────────────────────────────
 URO_MARKERS_MOUSE = [
-    "Krt8", "Krt18", "Krt19", "Epcam",
-    "Upk1a", "Upk1b", "Upk2", "Upk3a",
+    "Krt8", "Krt18", "Krt19",
+    "Upk1a", "Upk1b", "Upk2", "Upk3a", "Upk3b",
     "Krt20", "Krt5", "Krt14", "Trp63",
     "Foxa1", "Gata3", "Pparg",
 ]
 
-UPK_MARKERS_MOUSE = ["Upk1a", "Upk1b", "Upk2", "Upk3a"]
+UPK_MARKERS_MOUSE   = ["Upk1a", "Upk1b", "Upk2", "Upk3a", "Upk3b"]
+BASAL_MARKERS_MOUSE = ["Krt5", "Krt14", "Trp63"]   # ≥2/3 required to tolerate dropout
+LUMINAL_TF_MOUSE    = ["Foxa1", "Gata3"]            # urothelial master TFs; absent from kidney tubules
+BASAL_MIN_POSITIVE  = 2                             # minimum of the 3 basal markers that must be > 0
 
 KIDNEY_EXCLUDE_MOUSE = [
     "Slc34a1", "Lrp2", "Cubn",      # proximal tubule
@@ -54,7 +65,7 @@ KIDNEY_EXCLUDE_MOUSE = [
 ]
 
 KIDNEY_SCORE_NAME = "KidneyEpiScore1"
-KIDNEY_SCORE_MAX = 0.1
+KIDNEY_SCORE_MAX = 0.2
 RANDOM_STATE = 0
 
 
@@ -76,6 +87,13 @@ def positive_any_gene_mask(expr):
     if sp.issparse(expr):
         return np.asarray((expr > 0).sum(axis=1)).ravel() > 0
     return np.asarray(expr > 0).any(axis=1)
+
+
+def positive_n_genes_mask(expr, n):
+    """Cells with expression > 0 in at least n of the supplied genes."""
+    if sp.issparse(expr):
+        return np.asarray((expr > 0).sum(axis=1)).ravel() >= n
+    return np.asarray((expr > 0).sum(axis=1)).ravel() >= n
 
 
 def positive_counts_by_gene(expr):
@@ -111,28 +129,44 @@ adata = sc.read_h5ad(query_path)
 print(f"  Total cells: {adata.n_obs:,}   genes: {adata.n_vars}")
 
 # ── Check marker availability ────────────────────────────────────────────────
-uro_found, uro_missing = split_present_missing(adata, URO_MARKERS_MOUSE)
-upk_found, upk_missing = split_present_missing(adata, UPK_MARKERS_MOUSE)
+uro_found,    uro_missing    = split_present_missing(adata, URO_MARKERS_MOUSE)
+upk_found,    upk_missing    = split_present_missing(adata, UPK_MARKERS_MOUSE)
+basal_found,  basal_missing  = split_present_missing(adata, BASAL_MARKERS_MOUSE)
+luminal_found, luminal_missing = split_present_missing(adata, LUMINAL_TF_MOUSE)
 kidney_found, kidney_missing = split_present_missing(adata, KIDNEY_EXCLUDE_MOUSE)
 
-print(f"  Urothelial markers found  ({len(uro_found)}): {uro_found}")
+print(f"\n  Urothelial markers found  ({len(uro_found)}): {uro_found}")
 if uro_missing:
     print(f"  Urothelial markers absent ({len(uro_missing)}): {uro_missing}")
-
 print(f"  Uroplakin markers found   ({len(upk_found)}): {upk_found}")
 if upk_missing:
     print(f"  Uroplakin markers absent  ({len(upk_missing)}): {upk_missing}")
-
+print(f"  Basal markers found       ({len(basal_found)}): {basal_found}")
+if basal_missing:
+    print(f"  Basal markers absent      ({len(basal_missing)}): {basal_missing}")
+print(f"  Luminal TF markers found  ({len(luminal_found)}): {luminal_found}")
+if luminal_missing:
+    print(f"  Luminal TF markers absent ({len(luminal_missing)}): {luminal_missing}")
 print(f"  Kidney exclude found      ({len(kidney_found)}): {kidney_found}")
 if kidney_missing:
     print(f"  Kidney exclude absent     ({len(kidney_missing)}): {kidney_missing}")
 
-if "Epcam" not in adata.var_names:
-    raise ValueError("Strict extraction requires Epcam, but Epcam is absent.")
 if not upk_found:
-    raise ValueError("Strict extraction requires at least one Upk marker, but none are present.")
+    raise ValueError("Extraction requires at least one Upk marker, but none are present.")
+if len(basal_found) < BASAL_MIN_POSITIVE:
+    raise ValueError(
+        f"Basal arm requires at least {BASAL_MIN_POSITIVE} of {BASAL_MARKERS_MOUSE} "
+        f"present in the dataset, but only found: {basal_found}"
+    )
+if "Epcam" not in adata.var_names:
+    raise ValueError("Intermediate arm requires Epcam, but it is absent from this AnnData.")
+for _g in ("Krt7", "Krt8"):
+    if _g not in adata.var_names:
+        raise ValueError(f"Intermediate arm requires {_g}, but it is absent from this AnnData.")
+if not luminal_found:
+    raise ValueError("Intermediate arm requires at least one of Foxa1/Gata3, but none are present.")
 if not kidney_found:
-    raise ValueError("Strict extraction requires kidney-exclusion markers, but none are present.")
+    raise ValueError("Extraction requires kidney-exclusion markers, but none are present.")
 
 # ── Compute kidney epithelial module score ───────────────────────────────────
 print("\nScoring kidney epithelial exclusion markers ...")
@@ -143,58 +177,82 @@ print(
     f"median={np.nanmedian(score):.3f}, max={np.nanmax(score):.3f}"
 )
 
-# ── Build stringent positive-cell mask ───────────────────────────────────────
-epcam_expr = expression_for_genes(adata, ["Epcam"])
-upk_expr = expression_for_genes(adata, upk_found)
-uro_expr = expression_for_genes(adata, uro_found)
+# ── Build three-arm OR mask ───────────────────────────────────────────────────
+upk_expr     = expression_for_genes(adata, upk_found)
+basal_expr   = expression_for_genes(adata, basal_found)
+epcam_expr   = expression_for_genes(adata, ["Epcam"])
+luminal_expr = expression_for_genes(adata, luminal_found)
+uro_expr     = expression_for_genes(adata, uro_found)
 
-epcam_positive_mask = positive_any_gene_mask(epcam_expr)
-upk_positive_mask = positive_any_gene_mask(upk_expr)
-kidney_low_mask = score < KIDNEY_SCORE_MAX
-strict_uro_mask = epcam_positive_mask & upk_positive_mask & kidney_low_mask
+# arm 1: umbrella — any UPK > 0
+upk_mask          = positive_any_gene_mask(upk_expr)
+# arm 2: basal — ≥2 of Krt5/Krt14/Trp63 > 0
+basal_mask        = positive_n_genes_mask(basal_expr, BASAL_MIN_POSITIVE)
+# arm 3: intermediate — Epcam > 0 AND Krt7 > 0 AND Krt8 > 0 AND any of Foxa1/Gata3 > 0
+epcam_mask        = positive_any_gene_mask(epcam_expr)
+krt7_mask         = positive_any_gene_mask(expression_for_genes(adata, ["Krt7"]))
+krt8_mask         = positive_any_gene_mask(expression_for_genes(adata, ["Krt8"]))
+luminal_tf_mask   = positive_any_gene_mask(luminal_expr)
+intermediate_mask = epcam_mask & krt7_mask & krt8_mask & luminal_tf_mask
 
-adata.obs["strict_uro_Epcam_positive"] = epcam_positive_mask
-adata.obs["strict_uro_Upk_positive"] = upk_positive_mask
-adata.obs["strict_uro_low_kidney_epi_score"] = kidney_low_mask
-adata.obs["strict_urothelium"] = strict_uro_mask
+kidney_low_mask  = score < KIDNEY_SCORE_MAX
+strict_uro_mask  = (upk_mask | basal_mask | intermediate_mask) & kidney_low_mask
 
-print("\nStrict urothelial extraction gates:")
-print_gate_count("Epcam > 0", epcam_positive_mask, adata.n_obs)
-print_gate_count("any Upk1a/Upk1b/Upk2/Upk3a > 0", upk_positive_mask, adata.n_obs)
+adata.obs["uro_umbrella_arm"]         = upk_mask
+adata.obs["uro_basal_arm"]            = basal_mask
+adata.obs["uro_intermediate_arm"]     = intermediate_mask
+adata.obs["uro_low_kidney_epi_score"] = kidney_low_mask
+adata.obs["strict_urothelium"]        = strict_uro_mask
+
+print("\nUrothelial extraction gates:")
+print_gate_count("any UPK > 0  (umbrella arm)", upk_mask, adata.n_obs)
+print_gate_count(f"≥{BASAL_MIN_POSITIVE}/3 Krt5/Krt14/Trp63 > 0 (basal arm)", basal_mask, adata.n_obs)
+print_gate_count("Epcam+Krt7+Krt8+Foxa1/Gata3 (intermediate arm)", intermediate_mask, adata.n_obs)
+print_gate_count("any arm positive", upk_mask | basal_mask | intermediate_mask, adata.n_obs)
 print_gate_count(f"{KIDNEY_SCORE_NAME} < {KIDNEY_SCORE_MAX}", kidney_low_mask, adata.n_obs)
-print_gate_count("ALL strict gates", strict_uro_mask, adata.n_obs)
+print_gate_count("FINAL (any arm) AND low kidney score", strict_uro_mask, adata.n_obs)
 
 if int(strict_uro_mask.sum()) == 0:
     raise ValueError("No cells passed the strict urothelial extraction gates.")
 
 # ── Per-marker cell counts ───────────────────────────────────────────────────
-print("\n  Per-urothelial-marker positive cell counts:")
+print("\n  Per-urothelial-marker positive counts:")
 for gene, n in zip(uro_found, positive_counts_by_gene(uro_expr)):
     print(f"    {gene:<10s}: {n:>10,}")
 
-print("\n  Per-kidney-exclusion-marker positive cell counts:")
+print("\n  Per-kidney-exclusion-marker positive counts:")
 kidney_expr = expression_for_genes(adata, kidney_found)
 for gene, n in zip(kidney_found, positive_counts_by_gene(kidney_expr)):
     print(f"    {gene:<10s}: {n:>10,}")
 
 # ── Dataset breakdown ─────────────────────────────────────────────────────────
 if "DataSet" in adata.obs.columns:
-    ds_counts = adata.obs.loc[strict_uro_mask, "DataSet"].value_counts()
     print("\n  Strict urothelial cells per DataSet:")
-    print(ds_counts.to_string())
+    print(adata.obs.loc[strict_uro_mask, "DataSet"].value_counts().to_string())
 
 if "condition" in adata.obs.columns:
-    condition_counts = adata.obs.loc[strict_uro_mask, "condition"].value_counts()
     print("\n  Strict urothelial cells per condition:")
-    print(condition_counts.to_string())
+    print(adata.obs.loc[strict_uro_mask, "condition"].value_counts().to_string())
 
 if "sample_id" in adata.obs.columns:
-    sample_counts = adata.obs.loc[strict_uro_mask, "sample_id"].value_counts()
     print("\n  Strict urothelial cells per sample_id:")
-    print(sample_counts.to_string())
+    print(adata.obs.loc[strict_uro_mask, "sample_id"].value_counts().to_string())
+
+if "leiden_scVI" in adata.obs.columns:
+    print("\n  Strict urothelial cells per scVI cluster:")
+    print(adata.obs.loc[strict_uro_mask, "leiden_scVI"].value_counts().sort_index().to_string())
 
 # ── Subset and save ───────────────────────────────────────────────────────────
 adata_uro = adata[strict_uro_mask].copy()
 print(f"\nSaving {adata_uro.n_obs:,} urothelial cells to:\n  {out_path}")
 adata_uro.write_h5ad(out_path)
 print("Done.")
+
+# ── Arm breakdown in extracted cells ─────────────────────────────────────────
+print("\nArm breakdown in extracted urothelial cells:")
+print_gate_count("umbrella arm (any UPK)",
+                 adata_uro.obs["uro_umbrella_arm"], adata_uro.n_obs)
+print_gate_count(f"basal arm (≥{BASAL_MIN_POSITIVE}/3 Krt5/Krt14/Trp63)",
+                 adata_uro.obs["uro_basal_arm"], adata_uro.n_obs)
+print_gate_count("intermediate arm (Epcam+Krt7+Krt8+Foxa1/Gata3)",
+                 adata_uro.obs["uro_intermediate_arm"], adata_uro.n_obs)
