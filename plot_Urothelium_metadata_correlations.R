@@ -109,7 +109,7 @@ plot_association_heatmap <- function(mat, title, out_pdf, out_csv) {
   invisible(p)
 }
 
-  <- function(mat, title, out_pdf, out_csv) {
+plot_correlation_heatmap <- function(mat, title, out_pdf, out_csv) {
   write.csv(mat, out_csv, quote = FALSE)
 
   df <- as.data.frame(as.table(mat), stringsAsFactors = FALSE)
@@ -155,14 +155,13 @@ if (!file.exists(RDS_PATH)) {
 
 so <- readRDS(RDS_PATH)
 meta <- so@meta.data
-rm(so)
-gc()
 
 message("Loaded metadata for ", format(nrow(meta), big.mark = ","), " cells.")
 
 if ("condition" %in% colnames(meta)) {
-  keep <- !(as.character(meta$condition) %in% DROP_CONDITIONS)
-  meta <- meta[keep, , drop = FALSE]
+  keep_cells <- !(as.character(meta$condition) %in% DROP_CONDITIONS)
+  so <- so[, keep_cells]
+  meta <- so@meta.data
   message(
     "After dropping developmental conditions (",
     paste(DROP_CONDITIONS, collapse = ", "),
@@ -171,6 +170,15 @@ if ("condition" %in% colnames(meta)) {
     " cells."
   )
 }
+
+message("Computing average expression per group ...")
+avg_expr_cols <- intersect(METADATA_COR_COLS, colnames(meta))
+avg_expr_list <- setNames(lapply(avg_expr_cols, function(grp) {
+  AverageExpression(so, group.by = grp, assay = "RNA")[["RNA"]]
+}), avg_expr_cols)
+
+rm(so)
+gc()
 
 metadata_cols <- intersect(METADATA_COR_COLS, colnames(meta))
 if (length(metadata_cols) == 0) {
@@ -268,6 +276,35 @@ for (grp in metadata_cols) {
   plot_correlation_heatmap(
     cor_mat,
     paste0(grp, ": correlation of cluster-composition profiles"),
+    file.path(COR_DIR, paste0(prefix, "_correlation_heatmap.pdf")),
+    file.path(COR_DIR, paste0(prefix, "_correlation_matrix.csv"))
+  )
+}
+
+# ── Average expression correlation ────────────────────────────────────────────
+message("Plotting average expression correlation heatmaps ...")
+
+for (grp in metadata_cols) {
+  if (!(grp %in% names(avg_expr_list))) next
+  avg_mat <- avg_expr_list[[grp]]
+
+  group_counts <- table(meta[[grp]][!is.na(meta[[grp]])])
+  keep_groups <- names(group_counts[group_counts >= MIN_CELLS_PER_LEVEL])
+  keep_groups <- intersect(keep_groups, colnames(avg_mat))
+
+  if (length(keep_groups) < 2) {
+    warning("Skipping avg-expr correlation for ", grp,
+            ": fewer than two levels with at least ", MIN_CELLS_PER_LEVEL, " cells.")
+    next
+  }
+
+  avg_mat <- avg_mat[, keep_groups, drop = FALSE]
+  cor_mat <- cor(as.matrix(avg_mat), method = "pearson", use = "pairwise.complete.obs")
+
+  prefix <- paste0("avgexpr_", safe_filename(grp))
+  plot_correlation_heatmap(
+    cor_mat,
+    paste0(grp, ": correlation of average expression profiles"),
     file.path(COR_DIR, paste0(prefix, "_correlation_heatmap.pdf")),
     file.path(COR_DIR, paste0(prefix, "_correlation_matrix.csv"))
   )

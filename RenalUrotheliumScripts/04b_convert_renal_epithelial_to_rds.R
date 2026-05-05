@@ -6,9 +6,6 @@
 #   X              : log-normalised counts (float32)
 #   layers/counts  : raw integer counts
 #   obs            : includes epithelial_compartment, assign_method
-#
-# Input  : output/RenalUrothelium_renal_epithelial.h5ad
-# Output : output/RenalUrothelium_renal_epithelial.rds
 
 suppressPackageStartupMessages({
   library(zellkonverter)
@@ -16,7 +13,8 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
-base_dir  <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells"
+base_dir  <- paste0("/vast0/home/gdjacksonlab/lab/xxw004/UUO/",
+                    "Datasets/Mouse/UsedSingleCells")
 out_dir   <- file.path(base_dir, "RenalUrotheliumScripts", "output")
 h5ad_path <- file.path(out_dir, "RenalUrothelium_renal_epithelial.h5ad")
 rds_path  <- file.path(out_dir, "RenalUrothelium_renal_epithelial.rds")
@@ -30,10 +28,12 @@ cat("  SCE dims:", nrow(sce), "genes ×", ncol(sce), "cells\n")
 cat("Converting SCE → Seurat ...\n")
 so <- as.Seurat(sce, counts = "X", data = NULL)
 
-# If raw integer counts survived in the 'counts' layer, stash them too
-if ("counts" %in% assayNames(sce)) {
-  so[["RNA"]]$counts_raw <- assay(sce, "counts")
-  cat("  Transferred raw counts layer → RNA$counts_raw\n")
+# as.Seurat may name the assay "originalexp" or "X" rather than "RNA";
+# rename it so downstream scripts can rely on so[["RNA"]].
+default_assay <- DefaultAssay(so)
+if (default_assay != "RNA") {
+  so <- RenameAssays(so, assay = default_assay, new.assay.name = "RNA")
+  cat(sprintf("  Renamed assay '%s' → 'RNA'\n", default_assay))
 }
 
 # Transfer any dimensional reductions (may not exist pre-integration)
