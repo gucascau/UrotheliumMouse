@@ -127,10 +127,11 @@ keep = (umbrella | basal | intermediate | pan_krt) & kidney_score_ok
 
 ## Contact
 
-For questions about the analysis, contact:
+For questions about the analysis, please contact:
 
 Xin Wang
-KUTC Bioinformatics Team
-Kidney and Urinary Tract Center
-Nationwide Children's Hospital
+
+KUTC Bioinformatics Team  
+Kidney and Urinary Tract Center  
+Nationwide Children's Hospital  
 xin.wang@nationwidechildrens.org
