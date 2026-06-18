@@ -6,7 +6,7 @@ The urothelium forms a specialized epithelial barrier that lines the entire urin
 
 Here, we present a comprehensive single-cell and single-nucleus atlas of mouse urothelium spanning the kidney, ureter, and bladder. From large-scale integrations of whole kidney (797,381 cells across 89 datasets) and whole bladder (90,230 cells across 10 datasets)—encompassing healthy tissue as well as ischemia-reperfusion (AKI/IRI), obstructive (UUO), and cyclophosphamide-induced injury models—we extracted urothelial cells using a multi-arm, marker-based classification scheme (umbrella-cell uroplakins; basal Krt5/Krt14/Trp63; intermediate Epcam/Krt7/Krt8 with Foxa1/Gata3; and pan-keratin markers), applying a kidney-epithelial exclusion score to remove tubular contamination from kidney-derived data. This yielded 189,657 high-confidence urothelial cells, which we integrated with urothelial organoids derived from bladder and ureter and with in-house generated **kidney urothelium organoids (KUDO)**, as well as developmental and human datasets. In total, the atlas harmonizes 34 single-cell and single-nucleus datasets across multiple platforms and tissue sources using Harmony and scVI/scANVI. Through cross-organ, cross-system, and cross-species analyses, we define conserved and region-specific urothelial identity programs, establish organoid models that recapitulate native urothelial states, and provide a molecular framework for understanding urothelial biology across the urinary tract.
 
-<img src="Figs/ATLAS.pdf" width="1500"/>
+<img src="Figs/ATLAS.png" width="1500"/>
 
 For more details, please find the wiki page:    
 https://github.com/gucascau/UrotheliumMouse/wiki   
