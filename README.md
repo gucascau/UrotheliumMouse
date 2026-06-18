@@ -34,8 +34,6 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium
 
 ### Bladder
 
-10 scRNA-seq samples integrated into `BladderUrothelium_uro_cells_scvi.rds` (Yu et al. 2019 PMID:31462402; Liu et al. 2021 PMID:33538002; GSE164557; GSM4201633).
-
 | Sample ID | Accession | Technology | Condition |
 |---|---|---|---|
 | BladderNormal1 | GSM3723360 | 10X v2 | Normal bladder |
@@ -63,16 +61,6 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium
 |---|---|---|---|---|
 | KudoUUOUrothelium | In-house | PIPseq / sci-RNA-seq3 | UUO urothelium organoid + in vivo | `KudoUUOUrothelium_qc.rds` |
 
-## Pipeline Overview
-
-```text
-01_load_datasets.R          # Load raw data → Seurat objects
-02_qc_and_filter.R          # QC, filtering, DoubletFinder
-03_integrate_harmony.R      # Merge, normalize, HVG selection → saves checkpoint
-04_integrate_harmony.R      # ScaleData, PCA, Harmony, UMAP (runs from checkpoint)
-03b_export_for_scvi.R       # Export raw counts → scvi_input.h5ad
-04_scvi_integration.py      # scVI / scANVI integration (Python)
-```
 
 ## Requirements
 
@@ -92,7 +80,6 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium
 
 ## Urothelium Extraction Criteria (4-arm gate)
 
-Applied in `UrotheliumIntegrationScripts/02b_plot_AllUrothelium_markers_AllscRNA.R` after initial integration.
 A cell is **kept** if it passes **any arm** AND the **kidney score filter**.
 
 ### Arms
@@ -112,7 +99,7 @@ A cell is **kept** if it passes **any arm** AND the **kidney score filter**.
 > (requiring all 4 markers simultaneously) loses genuine cells to scRNA-seq
 > dropout — the pan-keratin arm recovers them.
 
-### Kidney-specific filter (KUDO qc cells only)
+### Kidney-specific filter 
 
 ```text
 KidneyEpiScore = AddModuleScore(tubular markers)
@@ -129,16 +116,8 @@ Tubular markers scored:
 | Collecting duct principal | Aqp2, Aqp3, Scnn1g |
 | Intercalated cells | Atp6v1b1, Slc4a1, Foxi1 |
 
-
 ### Final gate logic
 
 ```text
 keep = (umbrella | basal | intermediate | pan_krt) & kidney_score_ok
 ```
-
-## Key Design Decisions
-
-- **Ensembl ID conversion**: ChenSpatial, LakesnRNA, MKA, and KudoUUOUrothelium datasets contain Ensembl IDs; these are converted to gene symbols using `org.Mm.eg.db` before merging. Duplicates are resolved by keeping the highest-expressing gene.
-- **Batch correction**: Harmony corrects for both `sample_id` and `technology` (Drop-seq, 10X v2/v3, snRNA-seq, sci-RNA-seq3).
-- **scVI exclusions**: ChenSpatial, LakesnRNA, MKA, KudoUUOUrothelium, KidneyUUO7/8 are excluded from scVI because they lack raw integer counts (pre-normalized matrices).
-- **Memory**: Full dataset (~1M+ cells) requires 512 GB RAM (himem partition). scVI training uses GPU.
