@@ -1,4 +1,7 @@
 # Mouse Urothelium Single-Cell RNA-seq Integration Pipeline
+The urothelium forms a specialized epithelial barrier that lines the entire urinary tract, from the renal pelvis and ureter to the bladder, yet its cellular diversity and regional specialization remain poorly understood. While bladder urothelium has been extensively studied, the molecular architecture of upper urinary tract urothelium and its relationship to bladder epithelium remain largely unexplored. In particular, the renal pelvis urothelium—the first epithelial barrier of the kidney collecting system and a primary site of injury in obstructive nephropathy—has not been systematically characterized at single-cell resolution.
+
+Here, we present a comprehensive single-cell atlas of mouse urothelium spanning the kidney, ureter, and bladder, and integrate these data with urothelial organoids derived from bladder, ureter, and in-house generated kidney urothelium organoids (KUDO), as well as developmental and human datasets. Through cross-organ, cross-system, and cross-species analyses, we define conserved and region-specific urothelial identity programs, establish organoid models that recapitulate native urothelial states, and provide a molecular framework for understanding urothelial biology across the urinary tract.
 
 Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium datasets across kidney, bladder, and ureter tissues. Integrates 34 datasets from multiple platforms and tissue types using Harmony and scVI/scANVI.
 
@@ -87,51 +90,6 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium
 - torch 2.5.1+cu124
 - leidenalg, igraph, anndata
 
-## Usage (HPC / SLURM)
-
-### Step 1 — Load datasets
-
-```bash
-sbatch submit_01_load.sh
-```
-
-### Step 2 — QC and doublet removal (array job, one task per sample)
-
-```bash
-sbatch submit_02_qc_array.sh
-```
-
-### Step 3 — Merge, normalize, HVG selection
-
-```bash
-sbatch submit_03_integrate.sh
-# Outputs: integration_output/merged_normalized.rds
-#          integration_output/hvg_list.rds
-```
-
-### Step 4a — Harmony integration (run after Step 3)
-
-```bash
-sbatch submit_04_harmony.sh
-# Output: integration_output/merged_harmony_integrated.rds
-```
-
-### Step 4b — Export for scVI (run after Step 3, can run in parallel with 4a)
-
-```bash
-sbatch submit_03b_export.sh
-# Output: integration_output/scvi_input.h5ad
-```
-
-### Step 4c — scVI / scANVI integration (run after Step 4b)
-
-```bash
-sbatch submit_04_scvi.sh
-# Outputs: integration_output/scvi_integrated.h5ad
-#          integration_output/scvi_model/
-#          integration_output/scanvi_model/
-```
-
 ## Urothelium Extraction Criteria (4-arm gate)
 
 Applied in `UrotheliumIntegrationScripts/02b_plot_AllUrothelium_markers_AllscRNA.R` after initial integration.
@@ -171,10 +129,6 @@ Tubular markers scored:
 | Collecting duct principal | Aqp2, Aqp3, Scnn1g |
 | Intercalated cells | Atp6v1b1, Slc4a1, Foxi1 |
 
-> **Why only KUDO qc cells?**
-> scVI-processed kidney in vivo cells were already filtered by the upstream
-> `03_extract_uro.py` pipeline. Applying AddModuleScore to a mixed-tissue
-> dataset shifts the background and inflates scores for genuine urothelium.
 
 ### Final gate logic
 
@@ -187,4 +141,4 @@ keep = (umbrella | basal | intermediate | pan_krt) & kidney_score_ok
 - **Ensembl ID conversion**: ChenSpatial, LakesnRNA, MKA, and KudoUUOUrothelium datasets contain Ensembl IDs; these are converted to gene symbols using `org.Mm.eg.db` before merging. Duplicates are resolved by keeping the highest-expressing gene.
 - **Batch correction**: Harmony corrects for both `sample_id` and `technology` (Drop-seq, 10X v2/v3, snRNA-seq, sci-RNA-seq3).
 - **scVI exclusions**: ChenSpatial, LakesnRNA, MKA, KudoUUOUrothelium, KidneyUUO7/8 are excluded from scVI because they lack raw integer counts (pre-normalized matrices).
-- **Memory**: Full dataset (~2M+ cells) requires 512 GB RAM (himem partition). scVI training uses GPU.
+- **Memory**: Full dataset (~1M+ cells) requires 512 GB RAM (himem partition). scVI training uses GPU.
