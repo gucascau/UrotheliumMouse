@@ -1,6 +1,8 @@
 # Mouse Urothelium Single-Cell RNA-seq Integration Pipeline
 The urothelium forms a specialized epithelial barrier that lines the entire urinary tract, from the renal pelvis and ureter to the bladder, yet its cellular diversity and regional specialization remain poorly understood. While bladder urothelium has been extensively studied, the molecular architecture of upper urinary tract urothelium and its relationship to bladder epithelium remain largely unexplored. In particular, the renal pelvis urothelium—the first epithelial barrier of the kidney collecting system and a primary site of injury in obstructive nephropathy—has not been systematically characterized at single-cell resolution.
 
+<img src="Figs/Urothelium_Fig.png" width="1500"/>
+
 Here, we present a comprehensive single-cell atlas of mouse urothelium spanning the kidney, ureter, and bladder, and integrate these data with urothelial organoids derived from bladder, ureter, and in-house generated kidney urothelium organoids (KUDO), as well as developmental and human datasets. Through cross-organ, cross-system, and cross-species analyses, we define conserved and region-specific urothelial identity programs, establish organoid models that recapitulate native urothelial states, and provide a molecular framework for understanding urothelial biology across the urinary tract.
 
 Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium datasets across kidney, bladder, and ureter tissues. Integrates 34 datasets from multiple platforms and tissue types using Harmony and scVI/scANVI.

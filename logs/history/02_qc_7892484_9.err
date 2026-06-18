@@ -1,400 +1,0 @@
-Loading required package: SeuratObject
-Loading required package: sp
-
-Attaching package: ‘SeuratObject’
-
-The following objects are masked from ‘package:base’:
-
-    intersect, t
-
-
-Attaching package: ‘dplyr’
-
-The following objects are masked from ‘package:stats’:
-
-    filter, lag
-
-The following objects are masked from ‘package:base’:
-
-    intersect, setdiff, setequal, union
-
-Using 8 parallel workers
-SLURM array mode: processing sample index 9
-Array mode: processing KidneyHealthy5
-
-=== QC + Doublet removal: KidneyHealthy5 ===
-  Before QC: 12261 cells
-Warning: Default search for "data" layer in "RNA" assay yielded no results; utilizing "counts" layer instead.
-  After QC thresholds: 12223 cells (removed 38)
-  Preprocessing for DoubletFinder (SCTransform + PCA + UMAP)...
-Warning: The default method for RunUMAP has changed from calling Python UMAP via reticulate to the R-native UWOT using the cosine metric
-To use Python UMAP via reticulate, set umap.method to 'umap-learn' and metric to 'correlation'
-This message will be shown once per session
-    DoubletFinder: 12223 cells, expected doublet rate = 9.8%
-Loading required package: fields
-Loading required package: spam
-Spam version 2.11-3 (2026-01-05) is loaded.
-Type 'help( Spam)' or 'demo( spam)' for a short introduction 
-and overview of this package.
-Help for individual functions is also obtained by adding the
-suffix '.spam' to the function name, e.g. 'help( chol.spam)'.
-
-Attaching package: ‘spam’
-
-The following object is masked from ‘package:Matrix’:
-
-    det
-
-The following objects are masked from ‘package:base’:
-
-    backsolve, forwardsolve
-
-Loading required package: viridisLite
-Loading required package: RColorBrewer
-
-Try help(fields) to get started.
-Loading required package: parallel
-Loading required package: sctransform
-Running SCTransform on assay: RNA
-vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 21490 by 10526
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-Found 84 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 21490 genes
-Computing corrected count matrix for 21490 genes
-Calculating gene attributes
-Wall clock passed: Time difference of 37.9394 secs
-Determine variable features
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Place corrected count matrix in counts slot
-Set default assay to SCT
-PC_ 1 
-Positive:  Slc12a1, Erbb4, Mecom, Egf, Prkg1, Meis2, Sgcz, Rbms3, Ldb2, Slc8a1 
-	   Cacnb4, Ebf1, Slit2, Slc12a3, Frmpd4, Phactr1, Abca13, Sox5, Pde1a, Plpp1 
-	   Pde3a, Dnm3, Tshz2, Gpc6, Dach1, Pbx1, Rgs6, Tenm2, Efna5, Cacnb2 
-Negative:  Ghr, Aadat, Keg1, Gramd1b, Slc7a12, Fut9, Slco1a6, Pde4d, Lrp2, Gk 
-	   Sugct, Dab2, Slc27a2, Nhs, Gclc, Slc25a21, Prlr, Tet2, Slc6a18, Slc34a1 
-	   Cubn, Pter, Slc22a19, Osbpl8, Trps1, Gm20400, Slc1a1, Slc13a1, Gpm6a, Snx29 
-PC_ 2 
-Positive:  Slc12a1, Erbb4, Egf, Slc12a3, Sgcz, Mecom, Cacnb4, Abca13, Slit2, Slc8a1 
-	   Esrrg, Ank3, Trpm6, Kng2, Slc5a3, Tenm2, Slc16a7, Ppargc1a, Sgms2, Pkhd1 
-	   Me3, Rgs6, Esrrb, Bckdhb, Phactr1, Wnk1, Efna5, Arhgap6, Calb1, Tsc22d1 
-Negative:  Meis2, Ldb2, Prkg1, Ebf1, Plpp1, Adgrl4, Pde3a, Pbx1, Emcn, Flt1 
-	   Gpc6, Dlc1, Tshz2, Chrm3, Gucy1a2, St6galnac3, B3galt1, Prex2, Ptprb, Zeb1 
-	   Lama2, Calcrl, Cfh, Tek, Cped1, Cyyr1, Cald1, Prkch, Arhgap31, Robo2 
-PC_ 3 
-Positive:  Slc34a1, Slc5a12, Nox4, Slc13a1, Bnc2, Slc4a4, Dab2, Pik3c2g, Fut9, Slc8a1 
-	   Acsm2, Folh1, Tmem117, Kynu, Gabrb3, Frmpd4, Phyhipl, Tnfaip8, Phactr1, Ndrg1 
-	   Abcc2, Ppara, Slc13a3, Bmpr1b, Car12, Pah, Errfi1, Itpr2, Nhs, Slc4a9 
-Negative:  Aadat, Ghr, Slc12a1, Slc7a12, Erbb4, Gramd1b, Slco1a6, Gpc5, Egf, Sgcz 
-	   Rnf24, Slc22a19, Gclc, Gm20400, Mettl7a2, Slc6a18, Mpv17l, 4930533I22Rik, Nceh1, Atp11a 
-	   Tet2, Tenm2, Cacnb4, Kng2, Gm30551, Prlr, Abca13, Mir99ahg, Slc5a3, Slc1a1 
-PC_ 4 
-Positive:  Frmpd4, Bmpr1b, Phactr1, Tmem117, Slc8a1, Aadat, Ghr, Naaladl2, Slc7a12, Grip1 
-	   Alcam, Aqp4, Slc4a9, Rcan2, Gramd1b, Mpped2, Gclc, Atp6v1c2, Atp6v0d2, Egfem1 
-	   Pde1c, Mgat4c, Malrd1, Slc26a4, Syn2, Slc12a3, Aldh1a3, Pde4b, Lsamp, Kif26b 
-Negative:  Slc12a1, Erbb4, Egf, Sgcz, Nox4, Slc34a1, Plcb1, Slc5a12, Slc13a1, Slc4a4 
-	   Dab2, Tenm2, Bnc2, Abca13, Cacnb4, Slc5a3, Meis2, Adgrl4, Plpp1, Umod 
-	   Acsm2, Slc2a13, Ano4, Ptger3, Slc9a3, Nhs, Ldb2, Flt1, Bckdhb, Kynu 
-PC_ 5 
-Positive:  Adgrl4, Plpp1, Meis2, Flt1, Pbx1, Emcn, Ptprb, Prkch, Tek, Chrm3 
-	   Cyyr1, D5Ertd615e, Ldb2, Slc12a3, Arhgap31, Rapgef4, Tll1, Ptprm, Slc8a1, Calcrl 
-	   St6galnac3, Fam117b, Hecw2, Entpd1, Adgrf5, Shank3, Ednrb, Pecam1, Dysf, Nlgn1 
-Negative:  Gpc6, Pde3a, Gucy1a2, Robo2, Lama2, Cfh, Rbms3, Lhfp, Prkg1, Csmd1 
-	   Kcnt2, Grm7, Adam12, B3galt1, Hsd11b1, Kcnd3, Rerg, Cacna1c, Fhl2, Frem1 
-	   Daam2, Colec12, Slc12a1, Tenm3, Zeb2, Adamtsl1, Gria4, Gm29683, Mylk, Abca8a 
-Running SCTransform on assay: RNA
-vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 21784 by 11111
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-Found 48 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 21784 genes
-Computing corrected count matrix for 21784 genes
-Calculating gene attributes
-Wall clock passed: Time difference of 38.21951 secs
-Determine variable features
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Place corrected count matrix in counts slot
-Set default assay to SCT
-PC_ 1 
-Positive:  Ghr, Aadat, Keg1, Gramd1b, Slc7a12, Fut9, Slco1a6, Lrp2, Sugct, Gk 
-	   Pde4d, Dab2, Slc27a2, Nhs, Gclc, Slc25a21, Prlr, Tet2, Slc6a18, Slc34a1 
-	   Pter, Slc22a19, Cubn, Gm20400, Trps1, Osbpl8, Slc1a1, Rnf24, Snx29, Gpm6a 
-Negative:  Slc12a1, Erbb4, Mecom, Egf, Prkg1, Meis2, Ldb2, Rbms3, Sgcz, Ebf1 
-	   Slc8a1, Cacnb4, Slc12a3, Frmpd4, Slit2, Gpc6, Pde3a, Plpp1, Sox5, Phactr1 
-	   Tshz2, Robo2, Abca13, Pde1a, Pbx1, Dnm3, Dach1, Dlc1, Adgrl4, Thsd7a 
-PC_ 2 
-Positive:  Slc12a1, Erbb4, Egf, Slc12a3, Sgcz, Cacnb4, Mecom, Slc8a1, Slit2, Abca13 
-	   Trpm6, Esrrg, Ank3, Kng2, Slc16a7, Sgms2, Slc5a3, Ppargc1a, Tenm2, Me3 
-	   Wnk1, Phactr1, Pkhd1, Rgs6, Calb1, Esrrb, Bckdhb, Tsc22d1, Arhgap6, Efna5 
-Negative:  Meis2, Ldb2, Prkg1, Ebf1, Plpp1, Adgrl4, Gpc6, Pde3a, Emcn, Flt1 
-	   Dlc1, Pbx1, Tshz2, Chrm3, Gucy1a2, St6galnac3, B3galt1, Prex2, Ptprb, Zeb1 
-	   Cfh, Lama2, Calcrl, Cped1, Tek, Robo2, Cyyr1, Cald1, Prkch, Arhgap31 
-PC_ 3 
-Positive:  Aadat, Ghr, Slc7a12, Slc12a1, Gramd1b, Erbb4, Gpc5, Slco1a6, Egf, Sgcz 
-	   Rnf24, Slc22a19, Gclc, Gm20400, Mettl7a2, Slc6a18, 4930533I22Rik, Mpv17l, Nceh1, Atp11a 
-	   Tet2, Gm30551, Prlr, Cacnb4, Tenm2, Mir99ahg, Kng2, Etl4, Slc1a1, Gpm6a 
-Negative:  Slc34a1, Nox4, Slc5a12, Slc13a1, Slc4a4, Dab2, Bnc2, Fut9, Pik3c2g, Acsm2 
-	   Folh1, Kynu, Gabrb3, Slc8a1, Phyhipl, Tnfaip8, Ndrg1, Abcc2, Magi2, Ppara 
-	   Slc13a3, Tmem117, Pah, Errfi1, Nhs, Ptprd, Car12, Kcnk5, Phactr1, Itpr2 
-PC_ 4 
-Positive:  Frmpd4, Bmpr1b, Tmem117, Slc8a1, Phactr1, Aadat, Alcam, Naaladl2, Rcan2, Slc4a9 
-	   Ghr, Grip1, Aqp4, Slc26a4, Atp6v1c2, Slc7a12, Mpped2, Atp6v0d2, Egfem1, Gramd1b 
-	   Malrd1, Lsamp, Gclc, Pde1c, Mgat4c, Pde4b, Rbms3, Syn2, Aldh1a3, Slc12a3 
-Negative:  Slc12a1, Erbb4, Egf, Sgcz, Plcb1, Nox4, Slc34a1, Slc5a12, Meis2, Adgrl4 
-	   Plpp1, Flt1, Tenm2, Abca13, Slc13a1, Cacnb4, Emcn, Slc4a4, Ldb2, Dab2 
-	   Slc5a3, Inpp4b, Umod, Bnc2, Ptprb, Pbx1, Slc2a13, Tek, Ano4, Ptger3 
-PC_ 5 
-Positive:  Adgrl4, Plpp1, Meis2, Flt1, Pbx1, Emcn, Slc8a1, Slc12a3, Ptprb, Prkch 
-	   Chrm3, Tek, Phactr1, Cyyr1, Frmpd4, Ldb2, D5Ertd615e, Rapgef4, Arhgap31, Tmem117 
-	   Adgrf5, Tll1, Ptprm, Calcrl, Fam117b, Hecw2, Calb1, Entpd1, Shank3, St6galnac3 
-Negative:  Gpc6, Robo2, Pde3a, Gucy1a2, Slc12a1, Lama2, Cfh, Prkg1, Rbms3, Csmd1 
-	   Lhfp, Erbb4, Kcnt2, Grm7, Magi2, Adam12, B3galt1, Ptpro, Kcnd3, Hsd11b1 
-	   Cacna1c, Rerg, Colec12, Sgcz, Fhl2, Daam2, Frem1, C1qtnf7, Sox5, Adamtsl1 
-Running SCTransform on assay: RNA
-vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 21984 by 11765
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-Found 29 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 21984 genes
-Computing corrected count matrix for 21984 genes
-Calculating gene attributes
-Wall clock passed: Time difference of 40.5127 secs
-Determine variable features
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Place corrected count matrix in counts slot
-Set default assay to SCT
-PC_ 1 
-Positive:  Ghr, Aadat, Keg1, Gramd1b, Slc7a12, Fut9, Slco1a6, Lrp2, Pde4d, Sugct 
-	   Gk, Dab2, Slc27a2, Nhs, Gclc, Slc25a21, Prlr, Tet2, Slc6a18, Slc22a19 
-	   Trps1, Gm20400, Slc34a1, Pter, Cubn, Rnf24, Osbpl8, Snx29, Slc1a1, 4930533I22Rik 
-Negative:  Slc12a1, Erbb4, Mecom, Egf, Prkg1, Meis2, Ldb2, Slc8a1, Rbms3, Sgcz 
-	   Ebf1, Slc12a3, Frmpd4, Cacnb4, Pde3a, Gpc6, Slit2, Sox5, Plpp1, Phactr1 
-	   Robo2, Dach1, Pbx1, Tshz2, Pde1a, Abca13, Dnm3, Dlc1, Thsd7a, Adgrl4 
-PC_ 2 
-Positive:  Slc12a1, Erbb4, Egf, Slc12a3, Slc8a1, Sgcz, Mecom, Cacnb4, Slit2, Abca13 
-	   Trpm6, Esrrg, Ank3, Sgms2, Kng2, Slc16a7, Ppargc1a, Slc5a3, Wnk1, Tenm2 
-	   Phactr1, Me3, Pkhd1, Calb1, Rgs6, Esrrb, Tsc22d1, Bckdhb, Arhgap6, Efna5 
-Negative:  Meis2, Ldb2, Prkg1, Ebf1, Plpp1, Adgrl4, Gpc6, Pde3a, Emcn, Pbx1 
-	   Flt1, Dlc1, Chrm3, Tshz2, Gucy1a2, St6galnac3, B3galt1, Prex2, Ptprb, Zeb1 
-	   Cfh, Calcrl, Lama2, Robo2, Cped1, Tek, Cyyr1, Cald1, Prkch, Thsd7a 
-PC_ 3 
-Positive:  Slc12a1, Aadat, Ghr, Erbb4, Slc7a12, Egf, Sgcz, Gpc5, Gramd1b, Slco1a6 
-	   Tenm2, Rnf24, Cacnb4, Slc22a19, Abca13, Kng2, Slc5a3, Gm20400, Meis2, Mettl7a2 
-	   4930533I22Rik, Slc6a18, Mpv17l, Ano4, Ldb2, Nceh1, Gclc, Slc2a13, Plpp1, Ptger3 
-Negative:  Slc34a1, Slc5a12, Nox4, Slc8a1, Tmem117, Slc13a1, Dab2, Slc4a4, Frmpd4, Bnc2 
-	   Phactr1, Bmpr1b, Fut9, Slc12a3, Pik3c2g, Magi2, Slc4a9, Slc26a4, Egfem1, Folh1 
-	   Acsm2, Car12, Alcam, Kynu, Gabrb3, Pde4b, Malrd1, Lsamp, Atp6v1c2, Tnfaip8 
-PC_ 4 
-Positive:  Aadat, Frmpd4, Ghr, Slc8a1, Slc7a12, Bmpr1b, Phactr1, Tmem117, Gramd1b, Gclc 
-	   Slco1a6, Naaladl2, Grip1, Rcan2, Alcam, Aqp4, Slc12a3, Egfem1, Mpped2, Slc4a9 
-	   Rnf24, Slc26a4, Slc22a19, Rbms3, Atp6v1c2, Malrd1, Gm20400, Pde1c, Mgat4c, Atp6v0d2 
-Negative:  Slc12a1, Slc34a1, Nox4, Slc5a12, Erbb4, Plcb1, Slc13a1, Slc4a4, Egf, Dab2 
-	   Bnc2, Sgcz, Acsm2, Fut9, Kynu, Folh1, Gabrb3, Phyhipl, Nhs, Adgrl4 
-	   Ppara, Meis2, Ndrg1, Pik3c2g, Abcc2, Plpp1, Ptprd, Flt1, Slc13a3, Tenm2 
-PC_ 5 
-Positive:  Slc8a1, Adgrl4, Meis2, Plpp1, Slc12a3, Flt1, Pbx1, Emcn, Ptprb, Prkch 
-	   Chrm3, Ldb2, Tek, Phactr1, Cyyr1, D5Ertd615e, Rapgef4, Arhgap31, Calb1, Trpm6 
-	   Calcrl, Tll1, Egfem1, Ptprm, Adgrf5, Frmpd4, Hecw2, Fam117b, Entpd1, Shank3 
-Negative:  Robo2, Gpc6, Pde3a, Magi2, Gucy1a2, Slc12a1, Ptpro, Lama2, Prkg1, Cfh 
-	   Rbms3, Erbb4, Csmd1, Wt1, Srgap1, Lhfp, Grm7, Kcnt2, Sgip1, Plce1 
-	   Zfp385b, C1qtnf7, Adam12, Pard3b, Arhgap28, Gm29266, Sema3e, Wt1os, B3galt1, Nphs1 
-Running SCTransform on assay: RNA
-vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 22195 by 12500
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-Found 32 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 22195 genes
-Computing corrected count matrix for 22195 genes
-Calculating gene attributes
-Wall clock passed: Time difference of 44.04677 secs
-Determine variable features
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Place corrected count matrix in counts slot
-Set default assay to SCT
-PC_ 1 
-Positive:  Slc12a1, Erbb4, Egf, Mecom, Slc8a1, Prkg1, Slc12a3, Meis2, Sgcz, Rbms3 
-	   Ldb2, Cacnb4, Ebf1, Slit2, Frmpd4, Phactr1, Abca13, Sox5, Dach1, Gpc6 
-	   Pde1a, Pde3a, Dnm3, Plpp1, Robo2, Pbx1, Tshz2, Rgs6, Tenm2, Efna5 
-Negative:  Ghr, Aadat, Keg1, Gramd1b, Slc7a12, Fut9, Slco1a6, Lrp2, Sugct, Pde4d 
-	   Gk, Dab2, Slc27a2, Nhs, Gclc, Slc25a21, Tet2, Prlr, Slc6a18, Pter 
-	   Cubn, Slc34a1, Trps1, Slc22a19, Osbpl8, Gm20400, Rnf24, Snx29, Slc1a1, Slc13a1 
-PC_ 2 
-Positive:  Meis2, Ldb2, Prkg1, Ebf1, Plpp1, Gpc6, Adgrl4, Pde3a, Pbx1, Emcn 
-	   Flt1, Dlc1, Chrm3, Tshz2, Gucy1a2, St6galnac3, B3galt1, Prex2, Ptprb, Zeb1 
-	   Robo2, Calcrl, Cfh, Lama2, Tek, Cped1, Cyyr1, Thsd7a, Cald1, Prkch 
-Negative:  Slc12a1, Erbb4, Slc12a3, Egf, Slc8a1, Sgcz, Cacnb4, Mecom, Slit2, Abca13 
-	   Trpm6, Esrrg, Sgms2, Ank3, Kng2, Wnk1, Slc16a7, Calb1, Ppargc1a, Phactr1 
-	   Slc5a3, Pkhd1, Tsc22d1, Me3, Tenm2, Esrrb, Rgs6, Bckdhb, Arhgap6, Klhl3 
-PC_ 3 
-Positive:  Slc34a1, Slc8a1, Slc5a12, Nox4, Slc13a1, Dab2, Slc4a4, Slc12a3, Bnc2, Phactr1 
-	   Fut9, Tmem117, Pik3c2g, Egfem1, Frmpd4, Acsm2, Folh1, Kynu, Calb1, Magi2 
-	   Gabrb3, Tnfaip8, Ndrg1, Phyhipl, Bmpr1b, Abcc2, Car12, Trpm6, Slc26a4, Ppara 
-Negative:  Aadat, Slc12a1, Ghr, Erbb4, Slc7a12, Egf, Sgcz, Gpc5, Gramd1b, Slco1a6 
-	   Rnf24, Tenm2, Slc22a19, Cacnb4, Gclc, Gm20400, Mettl7a2, Kng2, Slc5a3, Slc6a18 
-	   Abca13, Mpv17l, 4930533I22Rik, Nceh1, Atp11a, Tet2, Mir99ahg, Ano4, Umod, Gm30551 
-PC_ 4 
-Positive:  Slc8a1, Frmpd4, Aadat, Phactr1, Slc12a3, Ghr, Tmem117, Bmpr1b, Slc7a12, Egfem1 
-	   Gramd1b, Calb1, Gclc, Trpm6, Naaladl2, Grip1, Slc4a9, Tsc22d1, Slco1a6, Mpped2 
-	   Aqp4, Malrd1, Sgms2, Rcan2, Slc26a4, Tox3, Wnk1, Alcam, Atp6v1c2, Rnf24 
-Negative:  Slc12a1, Erbb4, Nox4, Slc34a1, Slc5a12, Egf, Sgcz, Plcb1, Slc13a1, Slc4a4 
-	   Dab2, Bnc2, Tenm2, Acsm2, Fut9, Nhs, Phyhipl, Folh1, Kynu, Slc5a3 
-	   Ppara, Gabrb3, Ptprd, Cacnb4, Ndrg1, Abca13, Umod, Slc9a3, Enpp2, Pik3c2g 
-PC_ 5 
-Positive:  Robo2, Magi2, Ptpro, Pde3a, Gpc6, Srgap1, Thsd7a, Wt1, Plce1, Sgip1 
-	   Rbms3, Pard3b, Arhgap28, Gucy1a2, Zfp385b, Nebl, Sema3e, Prkg1, Wt1os, Gm29266 
-	   Nphs1, C1qtnf7, Lama2, Astn2, Cfh, Lingo2, Nphs2, Tdrd5, Csmd1, Synpo 
-Negative:  Meis2, Adgrl4, Slc12a3, Plpp1, Flt1, Pbx1, Slc8a1, Emcn, Ldb2, Ptprb 
-	   Chrm3, Tek, Prkch, Cyyr1, D5Ertd615e, Arhgap31, Calcrl, Tll1, Rapgef4, Calb1 
-	   Trpm6, Ptprm, Hecw2, Fam117b, Entpd1, Zeb1, Shank3, Dysf, Rapgef5, Ednrb 
-Running SCTransform on assay: RNA
-vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 22382 by 13333
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-Found 21 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 22382 genes
-Computing corrected count matrix for 22382 genes
-Calculating gene attributes
-Wall clock passed: Time difference of 46.17978 secs
-Determine variable features
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Place corrected count matrix in counts slot
-Set default assay to SCT
-PC_ 1 
-Positive:  Ghr, Aadat, Keg1, Gramd1b, Slc7a12, Fut9, Slco1a6, Lrp2, Sugct, Gk 
-	   Pde4d, Dab2, Slc27a2, Nhs, Gclc, Tet2, Slc25a21, Prlr, Slc6a18, Trps1 
-	   Rnf24, Pter, Cubn, Slc22a19, Osbpl8, Slc34a1, Gm20400, Snx29, Slc1a1, Gpm6a 
-Negative:  Slc12a1, Erbb4, Egf, Mecom, Slc8a1, Prkg1, Slc12a3, Meis2, Rbms3, Sgcz 
-	   Ldb2, Frmpd4, Cacnb4, Ebf1, Slit2, Phactr1, Gpc6, Dach1, Sox5, Pde3a 
-	   Abca13, Pde1a, Robo2, Plpp1, Dnm3, Pbx1, Tmem117, Thsd7a, Tshz2, Rgs6 
-PC_ 2 
-Positive:  Slc12a1, Slc12a3, Erbb4, Slc8a1, Egf, Sgcz, Mecom, Cacnb4, Slit2, Abca13 
-	   Trpm6, Sgms2, Calb1, Wnk1, Esrrg, Phactr1, Ank3, Kng2, Slc16a7, Tsc22d1 
-	   Ppargc1a, Egfem1, Me3, Slc5a3, Pkhd1, Klhl3, Esrrb, Rgs6, Tenm2, Arhgap6 
-Negative:  Meis2, Ldb2, Prkg1, Ebf1, Plpp1, Gpc6, Adgrl4, Pde3a, Pbx1, Emcn 
-	   Flt1, Dlc1, Chrm3, Tshz2, Gucy1a2, St6galnac3, Prex2, B3galt1, Ptprb, Zeb1 
-	   Robo2, Calcrl, Thsd7a, Cfh, Tek, Cped1, Lama2, Cyyr1, Cald1, Prkch 
-PC_ 3 
-Positive:  Slc8a1, Slc12a3, Phactr1, Egfem1, Calb1, Frmpd4, Tmem117, Trpm6, Tsc22d1, Bmpr1b 
-	   Sgms2, Wnk1, Dach1, Malrd1, Tox3, Slc26a4, Slc34a1, Slc5a12, Slc4a9, Klhl3 
-	   Nox4, Lsamp, Cdk14, Alcam, Atp6v1c2, Rcan2, Cadps2, Pde4b, Kl, Tsc22d2 
-Negative:  Slc12a1, Erbb4, Egf, Sgcz, Tenm2, Aadat, Gpc5, Cacnb4, Slc5a3, Ghr 
-	   Abca13, Umod, Ano4, Ptger3, Slc2a13, Kng2, Pdgfd, Mrps6, Slc7a12, Bckdhb 
-	   Plekhg1, Arhgap6, Cgnl1, Erc2, Rgs6, Tmem207, Pcsk6, Ppargc1a, Inpp4b, Esrrb 
-PC_ 4 
-Positive:  Aadat, Ghr, Slc7a12, Slc8a1, Gramd1b, Slc12a3, Gclc, Slco1a6, Rnf24, Phactr1 
-	   Frmpd4, Slc22a19, Gpc5, Gm20400, Mettl7a2, Slc6a18, Mpv17l, 4930533I22Rik, Atp11a, Calb1 
-	   Tet2, Egfem1, Nceh1, Trpm6, Etl4, Prlr, Gm30551, Bmpr1b, Sgms2, Tsc22d1 
-Negative:  Nox4, Slc34a1, Slc5a12, Slc13a1, Slc4a4, Dab2, Bnc2, Fut9, Plcb1, Acsm2 
-	   Folh1, Pik3c2g, Kynu, Phyhipl, Gabrb3, Magi2, Nhs, Ndrg1, Tnfaip8, Ppara 
-	   Ptprd, Abcc2, Slc13a3, Pah, Errfi1, Enpp2, Auts2, Kcnk5, Slc12a1, Ppp1r16b 
-PC_ 5 
-Positive:  Robo2, Magi2, Ptpro, Thsd7a, Srgap1, Wt1, Pde3a, Plce1, Pard3b, Arhgap28 
-	   Nebl, Sgip1, Zfp385b, Sema3e, Wt1os, Nphs1, Gpc6, Gm29266, Rbms3, Lingo2 
-	   C1qtnf7, Astn2, Tdrd5, Nphs2, Alcam, Podxl, Synpo, Prkg1, Ntrk3, Gucy1a2 
-Negative:  Slc12a3, Meis2, Adgrl4, Plpp1, Flt1, Pbx1, Slc8a1, Emcn, Ldb2, Ptprb 
-	   Chrm3, Tek, Prkch, Cyyr1, D5Ertd615e, Arhgap31, Trpm6, Calcrl, Calb1, Tll1 
-	   Hecw2, Ptprm, Rapgef4, Zeb1, Fam117b, Entpd1, Prex2, Dysf, Rapgef5, Ebf1 
-Running SCTransform on assay: RNA
-vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 22543 by 14286
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-Found 16 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 22543 genes
-Computing corrected count matrix for 22543 genes
-Calculating gene attributes
-Wall clock passed: Time difference of 49.74153 secs
-Determine variable features
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Place corrected count matrix in counts slot
-Set default assay to SCT
-PC_ 1 
-Positive:  Slc12a1, Erbb4, Mecom, Egf, Slc8a1, Slc12a3, Sgcz, Prkg1, Cacnb4, Rbms3 
-	   Slit2, Meis2, Frmpd4, Ldb2, Dach1, Phactr1, Ebf1, Abca13, Pde1a, Sox5 
-	   Gpc6, Dnm3, Tmem117, Rgs6, Robo2, Tenm2, Pde3a, Efna5, Slc16a7, Pbx1 
-Negative:  Ghr, Aadat, Keg1, Gramd1b, Slc7a12, Fut9, Slco1a6, Pde4d, Lrp2, Sugct 
-	   Gk, Dab2, Slc27a2, Nhs, Gclc, Tet2, Slc25a21, Trps1, Prlr, Slc6a18 
-	   Rnf24, Pter, Snx29, Osbpl8, Cubn, Slc34a1, Slc22a19, Gm20400, Slc1a1, Gpm6a 
-PC_ 2 
-Positive:  Meis2, Ldb2, Prkg1, Ebf1, Plpp1, Gpc6, Adgrl4, Pbx1, Pde3a, Emcn 
-	   Flt1, Dlc1, Chrm3, Tshz2, Gucy1a2, St6galnac3, Robo2, Prex2, Thsd7a, Zeb1 
-	   Ptprb, B3galt1, Calcrl, Cfh, Cald1, Tek, Cped1, Cyyr1, Lama2, Prkch 
-Negative:  Slc12a1, Slc12a3, Erbb4, Slc8a1, Egf, Mecom, Sgcz, Cacnb4, Slit2, Abca13 
-	   Trpm6, Esrrg, Sgms2, Wnk1, Calb1, Ank3, Kng2, Phactr1, Slc16a7, Pkhd1 
-	   Ppargc1a, Tsc22d1, Egfem1, Slc5a3, Me3, Klhl3, Esrrb, Arhgap6, Tenm2, Rgs6 
-PC_ 3 
-Positive:  Slc8a1, Slc12a3, Phactr1, Egfem1, Calb1, Trpm6, Frmpd4, Tsc22d1, Wnk1, Sgms2 
-	   Tmem117, Tox3, Dach1, Klhl3, Bmpr1b, Malrd1, Cadps2, Cdk14, Tsc22d2, Cnnm2 
-	   Slc26a4, Kl, Sdk1, Defb1, Epb41l3, Slc4a9, Rhcg, Nr3c2, Lsamp, Phactr2 
-Negative:  Slc12a1, Erbb4, Egf, Sgcz, Tenm2, Slc5a3, Cacnb4, Umod, Ptger3, Ano4 
-	   Slc2a13, Gpc5, Plcb1, Abca13, Cgnl1, Mrps6, Arhgap6, Pdgfd, Plekhg1, Bckdhb 
-	   Kng2, Erc2, Ppargc1a, Rgs6, Pcsk6, Tmem207, Slc9a3, Zfpm2, Tenm4, Chst9 
-PC_ 4 
-Positive:  Nox4, Slc34a1, Slc5a12, Slc13a1, Slc4a4, Dab2, Bnc2, Magi2, Fut9, Pik3c2g 
-	   Acsm2, Folh1, Kynu, Phyhipl, Gabrb3, Ptprd, Nhs, Ndrg1, Plcb1, Ptpro 
-	   Tnfaip8, Ppara, Abcc2, Slc13a3, Pah, Errfi1, Auts2, Zfp385b, Thsd7a, Robo2 
-Negative:  Aadat, Ghr, Slc7a12, Gramd1b, Slco1a6, Gclc, Rnf24, Gpc5, Slc22a19, Gm20400 
-	   Mettl7a2, Mpv17l, Slc6a18, Atp11a, 4930533I22Rik, Slc8a1, Tet2, Nceh1, Slc12a3, Etl4 
-	   Mir99ahg, Prlr, Gm30551, Slc1a1, Gpm6a, Mat2a, Meis2, Napsa, Agps, Cp 
-PC_ 5 
-Positive:  Magi2, Ptpro, Robo2, Thsd7a, Srgap1, Wt1, Pard3b, Nebl, Sgip1, Arhgap28 
-	   Plce1, Zfp385b, Sema3e, Wt1os, Nphs1, Lingo2, Gm29266, Podxl, Nphs2, Tdrd5 
-	   Synpo, Aadat, Astn2, Alcam, C1qtnf7, Ghr, Ntrk3, Pde3a, Dach1, Gabrb1 
-Negative:  Meis2, Adgrl4, Plpp1, Ldb2, Pbx1, Flt1, Emcn, Slc12a3, Slc34a1, Nox4 
-	   Ptprb, Chrm3, Slc5a12, Prkch, Tek, Slc8a1, Cyyr1, Ebf1, Calcrl, Plcb1 
-	   Arhgap31, D5Ertd615e, Slc13a1, Slc4a4, Zeb1, Prex2, Ptprm, Dab2, Hecw2, Ptprg 
-Loading required package: KernSmooth
-KernSmooth 2.23 loaded
-Copyright M. P. Wand 1997-2009
-Loading required package: ROCR
-    Optimal pK = 0.0050
-    nExp = 1195  (adj = 1121, homotypic prop = 0.062)
-Running SCTransform on assay: RNA
-vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 22800 by 16297
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-Found 16 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 22800 genes
-Computing corrected count matrix for 22800 genes
-Calculating gene attributes
-Wall clock passed: Time difference of 48.84303 secs
-Determine variable features
-Centering data matrix
-Error in getGlobalsAndPackages(expr, envir = envir, globals = globals) : 
-  The total size of the 14 globals exported for future expression (‘FUN()’) is 9.60 GiB. This exceeds the maximum allowed size 8.00 GiB per plan() argument 'maxSizeOfObjects'. This limit is set to protect against transfering too large objects to parallel workers by mistake, which may not be intended and could be costly. See help("future.globals.maxSize", package = "future") for how to adjust or remove the default threshold via an R option The three largest globals are ‘FUN’ (9.23 GiB of class ‘function’), ‘object’ (373.40 MiB of class ‘numeric’) and ‘split.cells’ (361.07 KiB of class ‘list’)
-Calls: run_doubletfinder ... getGlobalsAndPackagesXApply -> getGlobalsAndPackages
-Execution halted
