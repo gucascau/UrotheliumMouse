@@ -52,20 +52,25 @@ https://github.com/gucascau/UrotheliumMouse/wiki
 | BladderH48_2 | GSM5014062 | 10X | Acute CPP 48h |
 | BladderD11_1 | GSM5014063 | 10X | Chronic CPP 11 days |
 | BladderD11_2 | GSM5014064 | 10X | Chronic CPP 11 days |
+
+### Bladder Urothelium Organoid
+
+| Sample ID | Accession | Technology | Condition |
+|---|---|---|---|
 | BladderHomogenate1 | GSM3827175 | 10X | Bladder organoid |
 | BladderHomogenate2 | GSM3827176 | 10X | Bladder organoid |
 
-### Ureter
+### Ureteral Urothelium Organoid
 
-| Sample ID | Accession | Technology | Condition | Processed File |
-|---|---|---|---|---|
-| UreterOrganoid | GSM8635363 | 10X | Ureter organoid | `MouseUreterRecon1_qc.rds` |
+| Sample ID | Accession | Technology | Condition |
+|---|---|---|---|
+| UreterOrganoid | GSM8635363 | 10X | Ureter organoid |
 
-### Organoids
+### Kidney Urothelium Organoids (**KUDO**)
 
-| Sample ID | Accession | Technology | Condition | Processed File |
-|---|---|---|---|---|
-| KudoUUOUrothelium | In-house | PIPseq / sci-RNA-seq3 | UUO urothelium organoid + in vivo | `KudoUUOUrothelium_qc.rds` |
+| Sample ID | Accession | Technology | Condition |
+|---|---|---|---|
+| KudoUrothelium | In-house | PIPseq  | kidney urothelium organoid |
 
 ## Requirements
 
