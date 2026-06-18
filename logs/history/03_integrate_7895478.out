@@ -1,8 +1,0 @@
-Job Statistics for 7895478:
-           JobID       User               Start                 End    Elapsed   TotalCPU      State        NodeList 
----------------- ---------- ------------------- ------------------- ---------- ---------- ---------- --------------- 
-         7895478     xxw004 2026-04-13T15:22:08 2026-04-13T16:04:32   00:42:24  42:06.818     FAILED   r1pl-hpcf-h03 
-   7895478.batch            2026-04-13T15:22:08 2026-04-13T16:04:32   00:42:24  42:06.816     FAILED   r1pl-hpcf-h03 
-  7895478.extern            2026-04-13T15:22:08 2026-04-13T16:04:32   00:42:24  00:00.001  COMPLETED   r1pl-hpcf-h03 
-Requested Resources: billing=16,cpu=16,mem=512G,node=1
-Maximum CPU Memory: 375194.48M; 	CPU Efficiency: 6.21% of 11:18:24 core-walltime
