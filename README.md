@@ -52,13 +52,13 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium
 
 | Sample ID | Accession | Technology | Condition | Processed File |
 |---|---|---|---|---|
-| UreterOrganoid | In-house | 10X | Ureter organoid | `MouseUreterRecon1_qc.rds` |
+| UreterOrganoid | GSM8635363 | 10X | Ureter organoid | `MouseUreterRecon1_qc.rds` |
 
 ### Organoids
 
 | Sample ID | Accession | Technology | Condition | Processed File |
 |---|---|---|---|---|
-| KudoUUOUrothelium | GSE190887 / In-house | PIPseq / sci-RNA-seq3 | UUO urothelium organoid + in vivo | `KudoUUOUrothelium_qc.rds` |
+| KudoUUOUrothelium | In-house | PIPseq / sci-RNA-seq3 | UUO urothelium organoid + in vivo | `KudoUUOUrothelium_qc.rds` |
 
 ## Pipeline Overview
 
