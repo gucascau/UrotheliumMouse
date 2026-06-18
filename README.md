@@ -8,6 +8,9 @@ Here, we present a comprehensive single-cell atlas of mouse urothelium spanning 
 
 Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium datasets across kidney, bladder, and ureter tissues. Integrates 34 datasets from multiple platforms and tissue types using Harmony and scVI/scANVI.
 
+For more details, please find the wiki page:    
+https://github.com/gucascau/UrotheliumMouse/wiki   
+
 ## Datasets
 
 ### Kidney
