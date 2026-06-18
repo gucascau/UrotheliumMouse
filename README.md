@@ -45,8 +45,8 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium
 | BladderH48_2 | GSM5014062 | 10X | Acute CPP 48h |
 | BladderD11_1 | GSM5014063 | 10X | Chronic CPP 11 days |
 | BladderD11_2 | GSM5014064 | 10X | Chronic CPP 11 days |
-| BladderHomogenate1 | In-house | 10X | Bladder organoid |
-| BladderHomogenate2 | In-house | 10X | Bladder organoid |
+| BladderHomogenate1 | GSM3827175 | 10X | Bladder organoid |
+| BladderHomogenate2 | GSM3827176 | 10X | Bladder organoid |
 
 ### Ureter
 
@@ -58,7 +58,7 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium
 
 | Sample ID | Accession | Technology | Condition | Processed File |
 |---|---|---|---|---|
-| KudoUUOUrothelium | In-house | 10X | UUO urothelium organoid | `KudoUUOUrothelium_qc.rds` |
+| KudoUUOUrothelium | GSE190887 / In-house | PIPseq / sci-RNA-seq3 | UUO urothelium organoid + in vivo | `KudoUUOUrothelium_qc.rds` |
 
 ## Pipeline Overview
 
@@ -130,6 +130,56 @@ sbatch submit_04_scvi.sh
 # Outputs: integration_output/scvi_integrated.h5ad
 #          integration_output/scvi_model/
 #          integration_output/scanvi_model/
+```
+
+## Urothelium Extraction Criteria (4-arm gate)
+
+Applied in `UrotheliumIntegrationScripts/02b_plot_AllUrothelium_markers_AllscRNA.R` after initial integration.
+A cell is **kept** if it passes **any arm** AND the **kidney score filter**.
+
+### Arms
+
+| Arm | Markers | Logic | Tissues |
+|-----|---------|-------|---------|
+| **Umbrella** | Upk1a, Upk1b, Upk2, Upk3a, Upk3b | any > 0 | All |
+| **Basal** | Krt5, Krt14, Trp63 | ≥ 2 of 3 > 0 | All |
+| **Intermediate** | Epcam, Krt7, Krt8, Foxa1/Gata3 | all four expressed simultaneously | All |
+| **Pan-keratin** | Krt8, Krt18, Krt19 | any > 0 | **Non-kidney only** |
+
+> **Why pan-keratin is excluded from kidney:**
+> Krt18 is expressed in kidney proximal tubular cells, so it cannot safely gate
+> kidney urothelium on its own. Bladder and ureter have no tubular contamination,
+> so Krt8/Krt18/Krt19 are safe universal markers there. Ureter urothelium also
+> expresses lower uroplakins than bladder, and the strict intermediate arm
+> (requiring all 4 markers simultaneously) loses genuine cells to scRNA-seq
+> dropout — the pan-keratin arm recovers them.
+
+### Kidney-specific filter (KUDO qc cells only)
+
+```text
+KidneyEpiScore = AddModuleScore(tubular markers)
+Keep if KidneyEpiScore1 < 0.2
+```
+
+Tubular markers scored:
+
+| Cell type | Markers |
+|-----------|---------|
+| Proximal tubule | Slc34a1, Lrp2, Cubn |
+| TAL | Umod, Slc12a1 |
+| DCT | Slc12a3 |
+| Collecting duct principal | Aqp2, Aqp3, Scnn1g |
+| Intercalated cells | Atp6v1b1, Slc4a1, Foxi1 |
+
+> **Why only KUDO qc cells?**
+> scVI-processed kidney in vivo cells were already filtered by the upstream
+> `03_extract_uro.py` pipeline. Applying AddModuleScore to a mixed-tissue
+> dataset shifts the background and inflates scores for genuine urothelium.
+
+### Final gate logic
+
+```text
+keep = (umbrella | basal | intermediate | pan_krt) & kidney_score_ok
 ```
 
 ## Key Design Decisions
