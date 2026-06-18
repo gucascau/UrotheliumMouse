@@ -3,7 +3,7 @@ The urothelium forms a specialized epithelial barrier that lines the entire urin
 
 <img src="Figs/Urothelium_Fig.png" width="1500"/>
 
-Here, we present a comprehensive single-cell atlas of mouse urothelium spanning the kidney, ureter, and bladder, and integrate these data with urothelial organoids derived from bladder, ureter, and in-house generated kidney urothelium organoids (KUDO), as well as developmental and human datasets. Through cross-organ, cross-system, and cross-species analyses, we define conserved and region-specific urothelial identity programs, establish organoid models that recapitulate native urothelial states, and provide a molecular framework for understanding urothelial biology across the urinary tract.
+Here, we present a comprehensive single-cell atlas of mouse urothelium spanning the kidney, ureter, and bladder, and integrate these data with urothelial organoids derived from bladder, ureter, and in-house generated **kidney urothelium organoids (KUDO)**, as well as developmental and human datasets. Through cross-organ, cross-system, and cross-species analyses, we define conserved and region-specific urothelial identity programs, establish organoid models that recapitulate native urothelial states, and provide a molecular framework for understanding urothelial biology across the urinary tract.
 
 Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium datasets across kidney, bladder, and ureter tissues. Integrates 34 datasets from multiple platforms and tissue types using Harmony and scVI/scANVI.
 
