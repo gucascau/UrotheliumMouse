@@ -1,13 +1,6 @@
 # ── Data directories (large files, not tracked in git) ───────────────────────
 RenalUrothelium/
-BladderUrothelium/Raw/
-BladderUrothelium/integration_output/
-BladderUrothelium/logs/
-BladderUrothelium/qc_h5ad/
-BladderUrothelium/qc_plots/
-BladderUrothelium/seurat_objects/
-BladderUrothelium/BladderUrotheliumScripts/output/
-BladderUrothelium/BladderUrotheliumScripts/logs/
+BladderUrothelium/
 UreterUrothlium/
 Annotation/
 RawDatasets/
