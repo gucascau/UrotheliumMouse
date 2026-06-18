@@ -123,3 +123,14 @@ Tubular markers scored:
 ```text
 keep = (umbrella | basal | intermediate | pan_krt) & kidney_score_ok
 ```
+
+
+## Contact
+
+For questions about the analysis, contact:
+
+Xin Wang
+KUTC Bioinformatics Team
+Kidney and Urinary Tract Center
+Nationwide Children's Hospital
+xin.wang@nationwidechildrens.org
