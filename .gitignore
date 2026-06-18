@@ -1,6 +1,13 @@
 # ── Data directories (large files, not tracked in git) ───────────────────────
 RenalUrothelium/
-BladderUrothelium/
+BladderUrothelium/Raw/
+BladderUrothelium/integration_output/
+BladderUrothelium/logs/
+BladderUrothelium/qc_h5ad/
+BladderUrothelium/qc_plots/
+BladderUrothelium/seurat_objects/
+BladderUrothelium/BladderUrotheliumScripts/output/
+BladderUrothelium/BladderUrotheliumScripts/logs/
 UreterUrothlium/
 Annotation/
 RawDatasets/
@@ -17,6 +24,7 @@ logs/
 *.gz
 *.mtx
 *.loom
+*.pt
 
 # ── Tabular data (symlinked GEO files, large count matrices) ─────────────────
 *.csv
