@@ -1,8 +1,10 @@
-# Mouse UUO Single-Cell RNA-seq Integration Pipeline
+# Mouse Urothelium Single-Cell RNA-seq Integration Pipeline
 
-Single-cell and single-nucleus RNA-seq integration pipeline for mouse kidney UUO (Unilateral Ureteral Obstruction) datasets. Integrates 21 datasets from multiple platforms using Harmony and scVI/scANVI.
+Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium datasets across kidney, bladder, and ureter tissues. Integrates 26 datasets from multiple platforms and tissue types using Harmony and scVI/scANVI.
 
 ## Datasets
+
+### Kidney
 
 | Sample ID | Accession | Technology | Condition |
 |---|---|---|---|
@@ -23,10 +25,29 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse kidney UUO
 | EmbryosE9_5ToE13_5 | GSE119945 | sci-RNA-seq3 | Development |
 | KidneyUUO7 | GSE264184 | Dense matrix | UUO 10 days |
 | KidneyUUO8 | GSE264184 | Dense matrix | UUO 10 days |
-| KudoUUOUrothelium | KUDORDS | 10X | Urothelium organoid |
 | MKA | MKARDS | Mixed | Atlas |
 | ChenSpatial | ChenRDS | Mixed | Sex-specific |
 | LakesnRNA | LakesnRDS | Mixed | Reference |
+
+### Bladder
+
+| Sample ID | Accession | Technology | Condition | Processed File |
+|---|---|---|---|---|
+| BladderUrothelium | GSE129845 / GSE163029 / GSE164557 / GSM4201633 | 10X | Healthy bladder | `BladderUrothelium_uro_cells_scvi.rds` |
+| BladderHomogenate1 | In-house | 10X | Bladder organoid | `BladderHomogenate1_qc.rds` |
+| BladderHomogenate2 | In-house | 10X | Bladder organoid | `BladderHomogenate2_qc.rds` |
+
+### Ureter
+
+| Sample ID | Accession | Technology | Condition | Processed File |
+|---|---|---|---|---|
+| UreterOrganoid | In-house | 10X | Ureter organoid | `MouseUreterRecon1_qc.rds` |
+
+### Organoids
+
+| Sample ID | Accession | Technology | Condition | Processed File |
+|---|---|---|---|---|
+| KudoUUOUrothelium | In-house | 10X | UUO urothelium organoid | `KudoUUOUrothelium_qc.rds` |
 
 ## Pipeline Overview
 
