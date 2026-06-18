@@ -71,7 +71,7 @@ Single-cell and single-nucleus RNA-seq integration pipeline for mouse urothelium
 - org.Mm.eg.db (Ensembl → gene symbol mapping)
 - ggplot2, dplyr, patchwork, Matrix
 
-### Python packages (conda env: `cell2loc_env`)
+### Python packages 
 
 - scvi-tools >= 1.2.1
 - scanpy >= 1.9
