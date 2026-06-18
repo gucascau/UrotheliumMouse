@@ -1,5 +1,6 @@
 # ── Data directories (large files, not tracked in git) ───────────────────────
 RenalUrothelium/
+BladderUrothelium
 BladderUrothelium/Raw/
 BladderUrothelium/integration_output/
 BladderUrothelium/logs/
