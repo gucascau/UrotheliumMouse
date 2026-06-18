@@ -1,4 +1,4 @@
-# Mouse Urothelium Single-Cell RNA-seq Integration Pipeline
+# Urothelium of the Urinary Tract at Single-cell Resolution
 
 The urothelium forms a specialized epithelial barrier that lines the entire urinary tract, from the renal pelvis and ureter to the bladder, yet its cellular diversity and regional specialization remain poorly understood. While bladder urothelium has been extensively studied, the molecular architecture of upper urinary tract urothelium and its relationship to bladder epithelium remain largely unexplored. In particular, the renal pelvis urothelium—the first epithelial barrier of the kidney collecting system and a primary site of injury in obstructive nephropathy—has not been systematically characterized at single-cell resolution.
 
