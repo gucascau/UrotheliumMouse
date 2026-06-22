@@ -179,6 +179,12 @@ seurat_list <- lapply(INPUT_FILES, function(entry) {
   }
   DefaultAssay(so) <- "RNA"
 
+  # Convert to Seurat v5 Assay5 if loaded from v3/v4 format (required for JoinLayers)
+  if (!inherits(so[["RNA"]], "Assay5")) {
+    message("    Converting RNA assay to Seurat v5 Assay5 format")
+    so[["RNA"]] <- as(so[["RNA"]], "Assay5")
+  }
+
   # Drop non-RNA assays to save memory
   for (assay in c("SCT", "ATAC", "Spatial", "sketch", "originalexp")) {
     if (assay %in% Assays(so)) so[[assay]] <- NULL
@@ -340,6 +346,7 @@ merged <- RunHarmony(
   group.by.vars  = harmony_vars,
   reduction      = "pca",
   reduction.save = "harmony",
+  project.dim    = FALSE,
   verbose        = FALSE
 )
 merged[["pca"]] <- NULL
