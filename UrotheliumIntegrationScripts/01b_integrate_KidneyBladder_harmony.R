@@ -421,7 +421,7 @@ message(sprintf("Clusters    : %d", length(unique(merged$seurat_clusters))))
 message(sprintf("Samples     : %d", length(unique(merged$FinalSampleId))))
 message(sprintf("Output      : %s", OUT_PATH))
 
-
+merged <- readRDS(OUT_PATH)
 ################################################################################
 # STEP 11: Per-modality integration (sc vs sn)
 #
@@ -516,13 +516,24 @@ run_modality_pipeline <- function(so, mod_label) {
     if (n_grp > max_legend) p <- p + NoLegend()
     p
   }
+  # plots <- Filter(Negate(is.null), list(
+  #   make_plot_mod("seurat_clusters", "Clusters",      label = TRUE),
+  #   make_plot_mod("tissue",          "By Tissue"),
+  #   make_plot_mod("condition",       "By Condition"),
+  #   make_plot_mod("sample_id",       "By Sample"),
+  #   make_plot_mod("technology",      "By Technology"),
+  #   make_plot_mod("paper",           "By Paper")
+  # ))
+
   plots <- Filter(Negate(is.null), list(
-    make_plot_mod("seurat_clusters", "Clusters",      label = TRUE),
-    make_plot_mod("tissue",          "By Tissue"),
-    make_plot_mod("condition",       "By Condition"),
-    make_plot_mod("sample_id",       "By Sample"),
-    make_plot_mod("technology",      "By Technology"),
-    make_plot_mod("paper",           "By Paper")
+  make_plot("seurat_clusters", "Clusters",      label = TRUE),
+  make_plot("tissue",          "By Tissue"),
+  make_plot("FinalConditionL1",       "By ConditionL1"),
+  make_plot("FinalConditionL2",       "By ConditionL2"),
+  make_plot("FinalSampleId",       "By Sample"),
+  make_plot("Finalscsn",      "By snRNA vs scRNA"),
+  make_plot("Finalpaper",           "By Paper"),
+  make_plot("Finalgsm_id",           "By GSM ID")
   ))
   n_cols <- min(2, length(plots))
   tryCatch({
@@ -567,6 +578,7 @@ run_modality_pipeline <- function(so, mod_label) {
 }
 
 for (mod in c("sc", "sn")) {
+  # mod <- c("sc")
   cells_mod <- colnames(merged)[merged$modality == mod]
   if (length(cells_mod) == 0) {
     message(sprintf("\nSkipping modality '%s': no cells found.", mod)); next
@@ -578,3 +590,502 @@ for (mod in c("sc", "sn")) {
 
 message("\n===== All modalities complete =====")
 
+# I also want to compare the healthy bladder urothelium and healthy kidney urothelium, so I will subset the merged object to only include healthy samples from both tissues and then run Harmony integration on that subset. This will allow me to see how the healthy urothelium cells from the bladder and kidney cluster together or separately in the integrated space.
+
+healthymerged <- subset(merged, subset = FinalConditionL1 == "HealthyBladder" | FinalConditionL1 == "HealthyKidney")
+
+message("\nRunning Harmony on healthy subset ...")
+healthymerged@meta.data$FinalConditionL1 %>% table()
+healthymerged$modality <- healthymerged$FinalConditionL1
+message("Cells per modality group:")
+print(table(healthymerged$modality, useNA = "ifany"))
+
+# print required parameter for run_modality_pipeline
+
+
+# then run the pipeline 
+run_modality_pipeline(healthymerged, "HealthyOnlyComparison")
+
+
+health_out_path <- file.path(OUT_DIR, sprintf("HealthyOnlyComparison_KidneyBladderUrothelium_harmony_integrated.rds"))
+healthymerged <- readRDS(health_out_path)
+# 
+healthymerged@meta.data %>% pull(FinalConditionL1) %>% table()
+
+DimPlot(healthymerged, group.by = "modality", reduction = "umap_harmony", label = TRUE, repel = TRUE, raster = TRUE) + ggtitle("Healthy Bladder vs Healthy Kidney Urothelium")
+# Identify the biomarkers that differed between the healthy bladder urothelium and healthy kidney urothelium. I will use the FindMarkers function in Seurat to identify differentially expressed genes between the two groups of cells. This will help me understand the molecular differences between the healthy urothelium in these two tissues.
+HealthMarkersbetweenBladderKidney <- FindMarkers(healthymerged, ident.1 = "HealthyBladder", ident.2 = "HealthyKidney", group.by = "modality", logfc.threshold = 0.25, min.pct = 0.1, test.use = "MAST", verbose = TRUE)
+
+# save the markers to a CSV file for further analysis
+write.csv(HealthMarkersbetweenBladderKidney, file = file.path(OUT_DIR, "HealthyBladder_vs_HealthyKidney_markers.csv"), row.names = TRUE)
+
+# save the RDS
+saveRDS(HealthMarkersbetweenBladderKidney, file = file.path(OUT_DIR, "HealthyBladder_vs_HealthyKidney_markers.rds"))
+
+# draw the top markers
+library(tibble)
+library(dplyr)
+
+HealthMarkersbetweenBladderKidney %>% head(n=30)
+
+top_markers_bladder <- HealthMarkersbetweenBladderKidney %>%
+  tibble::rownames_to_column(var = "gene") %>%
+  filter(avg_log2FC > 0, p_val_adj < 0.05, !grepl("^mt-", gene, ignore.case = TRUE)) %>%
+  mutate(pct_diff = pct.1 - pct.2) %>%
+  arrange(desc(pct_diff), desc(avg_log2FC)) %>%
+  head(15)
+
+top_markers_kidney <- HealthMarkersbetweenBladderKidney %>%
+  tibble::rownames_to_column(var = "gene") %>%
+  filter(avg_log2FC < 0, p_val_adj < 0.05, !grepl("^mt-", gene, ignore.case = TRUE)) %>%
+  mutate(pct_diff = pct.2 - pct.1) %>%
+  arrange(desc(pct_diff), avg_log2FC) %>%
+  head(10)
+
+top_genes <- c(top_markers_bladder$gene, top_markers_kidney$gene)
+
+# ScaleData only ran on HVGs; scale top_genes so DoHeatmap can find them in scale.data
+healthymerged <- ScaleData(healthymerged, features = top_markers_bladder$gene, verbose = FALSE)
+
+# draw a heatmap of the top markers
+Idents(healthymerged) <- "modality"
+
+p_heatmap_bladder <- DoHeatmap(healthymerged, features = top_markers_bladder$gene, group.by = "modality",disp.max = 1.5) +
+  ggtitle("Top Markers: HealthyBladder vs HealthyKidney")
+
+ggsave(paste0(OUT_DIR, "/HealthyBladder_vs_HealthyKidney_top_bladdermarkers_heatmap.pdf"),
+       plot = p_heatmap_bladder, width = 10, height = 8)
+
+# file.path(OUT_DIR, sprintf("HealthyBladder_vs_HealthyKidney_top_markers_heatmap.pdf", pfx)
+
+# we only selected the AP-1 and Atp genes 
+
+top_ATP_markers_bladder <- HealthMarkersbetweenBladderKidney %>%
+  tibble::rownames_to_column(var = "gene") %>%
+  filter(avg_log2FC > 0, p_val_adj < 0.05, !grepl("^mt-", gene, ignore.case = TRUE)) %>%
+  mutate(pct_diff = pct.1 - pct.2) %>%
+  arrange(desc(pct_diff), desc(avg_log2FC)) %>% filter(
+grepl("Atp", gene, ignore.case = TRUE) & pct.1 >0.8 & pct.2 < 0.2)
+
+healthymerged <- ScaleData(healthymerged, features = top_ATP_markers_bladder$gene, verbose = FALSE)
+
+
+p_ATPheatmap_bladder <- DoHeatmap(healthymerged, features = top_ATP_markers_bladder$gene, group.by = "modality",disp.max = 1.5, disp.min= -1 ) +
+  ggtitle("Top Markers: HealthyBladder vs HealthyKidney")
+
+ggsave(paste0(OUT_DIR, "/HealthyBladder_vs_HealthyKidney_top_bladderATPmarkers_heatmap.pdf"),
+       plot = p_ATPheatmap_bladder, width = 10, height = 8)
+
+# generate a dotplot for the top ATP markers, legend change to AverExp, and PerExp
+p_ATPDotPlot_bladder <- DotPlot(healthymerged, features = top_ATP_markers_bladder$gene, group.by = "modality", cols = c("Spectral")) +
+  ggtitle("DotPlot: HealthyBladder vs HealthyKidney top ATP markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/HealthyBladder_vs_HealthyKidney_top_bladderATPmarkers_Dotplot.pdf"),
+       plot = p_ATPDotPlot_bladder, width = 7, height = 3.5)
+
+# AP-1 markers
+AP1Markers<- c("Fos", "Jun", "Junb", "Fosl2", "Atf3", "Egr1")
+
+p_AP1DotPlot_bladder <- DotPlot(healthymerged, features = AP1Markers, group.by = "modality", cols = c("Spectral")) +
+  ggtitle("DotPlot: HealthyBladder vs HealthyKidney top AP-1 markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/HealthyBladder_vs_HealthyKidney_top_bladderAP1markers_Dotplot.pdf"),
+       plot = p_AP1DotPlot_bladder, width = 7, height = 3.5)
+
+
+# Urothelium markers
+UrothelialMarkers<- c("Krt5", "Krt14", "Krt20",  "Trp63", "Upk1a","Upk1b", "Upk2", "Upk3a","Upk3b", "Foxa1", "Gata3", "Pparg", "Krt8", "Krt18", "Krt19")
+
+# Urothelium markers:
+#   Krt8, Krt18, Krt19                         — pan-urothelium keratins
+#   Upk1a, Upk1b, Upk2, Upk3a, Upk3b          — uroplakins
+#   Krt20, Krt5, Krt14, Trp63                  — umbrella / basal markers
+#   Foxa1, Gata3, Pparg                        — urothelial TFs
+
+p_UrothelialDotPlot_bladder <- DotPlot(healthymerged, features = UrothelialMarkers, group.by = "modality", cols = c("Spectral")) +
+  ggtitle("DotPlot: HealthyBladder vs HealthyKidney Urothelium markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/HealthyBladder_vs_HealthyKidney_Urotheliummarkers_Dotplot.pdf"),
+       plot = p_UrothelialDotPlot_bladder, width = 8, height = 3.5)
+
+
+CandiategenesMarkers <- c(
+# Renal identity
+"Pax8",
+"Pax2",
+"Glis3",
+"Fgfr2",
+
+# Cilia / collecting system
+"Pkhd1",
+"Bicc1",
+
+# Epithelial architecture
+"Magi1",
+"Cgnl1",
+"Ptpn14",
+
+# Basement membrane
+"Col4a3",
+"Col4a4",
+"Col4a5",
+
+# Bladder AP-1 program
+"Fos",
+"Jun",
+"Junb",
+"Fosl2", 
+"Atf3",
+
+# Bladder metabolic program
+"Atp5g2",
+"Atp5l",
+"Atpif1",
+"Atp5e"
+)
+
+p_CandidateDotPlot_bladderkidney <- DotPlot(healthymerged, features = CandiategenesMarkers, group.by = "modality", cols = c("Spectral")) +
+  ggtitle("DotPlot: HealthyBladder vs HealthyKidney Candidate markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/HealthyBladder_vs_HealthyKidney_FinalCandidateMmarkers_Dotplot.pdf"),
+       plot = p_CandidateDotPlot_bladderkidney, width = 10, height = 3.5)
+
+CandiategenesKidneyMarkers <- c(
+# Renal identity
+"Pax8",
+"Pax2",
+"Glis3",
+"Fgfr2",
+
+# Cilia / collecting system
+"Pkhd1",
+"Bicc1",
+
+# Epithelial architecture
+"Magi1",
+"Cgnl1",
+"Ptpn14",
+
+# Basement membrane
+"Col4a3",
+"Col4a4",
+"Col4a5") 
+p_CandidateDotPlot_kidney <- DotPlot(healthymerged, features = CandiategenesKidneyMarkers, group.by = "modality", cols = c("Spectral")) +
+  # ggtitle("DotPlot: HealthyBladder vs HealthyKidney Candidate markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/HealthyBladder_vs_HealthyKidney_FinalCandidateKidneyMmarkers_Dotplot.pdf"),
+       plot = p_CandidateDotPlot_kidney, width = 8, height = 4)
+
+# I also want to put the kidney epithelial and immune cells markers for healthy kidney and healthy bladder together to see how they cluster. I will subset the merged object to only include epithelial and immune cells from both tissues, then run Harmony integration on that subset. This will allow me to see how the epithelial and immune cells from the healthy bladder and healthy kidney cluster together or separately in the integrated space.
+
+# tubule cells markers
+RenalEpimuneMarkers <- c(
+  "Slc34a1", "Lrp2",    "Cubn",     # proximal tubule
+  "Umod",    "Slc12a1",             # TAL
+  "Slc12a3", "Pvalb",               # DCT
+  "Calb1", "Trpv5", "Atp2b4",       # CNT
+  "Aqp2",     "Scnn1g",   # collecting duct principal
+  "Atp6v1b1", "Slc4a1",  "Foxi1",   # intercalated cells
+  "Ptprc", "Cd3e", "Cd4", "Cd8a", "Cd14", "Cd68", "Itgam"   # Immune markers
+)
+
+p_tubuleImmDotPlot_kidney <- DotPlot(healthymerged, features = RenalEpimuneMarkers, group.by = "modality", cols = c("Spectral")) +
+  # ggtitle("DotPlot: HealthyBladder vs HealthyKidney Candidate markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/HealthyBladder_vs_HealthyKidney_FinalTubuleImmuneKidneyMmarkers_Dotplot.pdf"),
+       plot = p_tubuleImmDotPlot_kidney, width = 8, height = 4)
+
+
+################################################################################
+# STEP 12: GO & KEGG enrichment — HealthyBladder vs HealthyKidney urothelium
+#
+# DEG filters (from HealthMarkersbetweenBladderKidney):
+#   - exclude mt genes
+#   - FDR (p_val_adj) < 0.05
+#   - |avg_log2FC| > 0.25
+#   - expressed in ≥10% of cells in at least one group (pct.1 ≥ 0.1 | pct.2 ≥ 0.1)
+#
+# Gene sets:
+#   bladder_up : avg_log2FC > 0.25  (higher in bladder)
+#   kidney_up  : avg_log2FC < -0.25 (higher in kidney)
+################################################################################
+
+library(clusterProfiler)
+library(org.Mm.eg.db)
+library(enrichplot)
+
+message("\n===== STEP 12: GO & KEGG enrichment =====")
+
+# ── Filter DEGs ───────────────────────────────────────────────────────────────
+# Exclude mt genes (^mt-) and ribosomal protein genes (^Rps, ^Rpl, ^Mrps, ^Mrpl)
+is_excluded_gene <- function(g) {
+  grepl("^mt-", g, ignore.case = TRUE) |
+  grepl("^Rps", g, ignore.case = TRUE) |
+  grepl("^Rpl", g, ignore.case = TRUE) |
+  grepl("^Mrps", g, ignore.case = TRUE) |
+  grepl("^Mrpl", g, ignore.case = TRUE)
+}
+
+deg_all <- HealthMarkersbetweenBladderKidney %>%
+  tibble::rownames_to_column("gene") %>%
+  filter(
+    !is_excluded_gene(gene),
+    p_val_adj < 0.05,
+    abs(avg_log2FC) > 0.25,
+    pct.1 >= 0.1 | pct.2 >= 0.1
+  )
+
+message(sprintf("  DEGs after filtering: %d total (%d bladder-up, %d kidney-up)",
+  nrow(deg_all),
+  sum(deg_all$avg_log2FC > 0),
+  sum(deg_all$avg_log2FC < 0)))
+
+bladder_genes <- deg_all %>% filter(avg_log2FC >  0.25) %>% pull(gene)
+kidney_genes  <- deg_all %>% filter(avg_log2FC < -0.25) %>% pull(gene)
+
+# Background = all genes tested in FindMarkers (excluding mt and ribosomal)
+background_genes <- HealthMarkersbetweenBladderKidney %>%
+  tibble::rownames_to_column("gene") %>%
+  filter(!is_excluded_gene(gene)) %>%
+  pull(gene)
+
+# ── Symbol → Entrez ID conversion ────────────────────────────────────────────
+sym2entrez <- function(genes) {
+  mapped <- bitr(genes, fromType = "SYMBOL", toType = "ENTREZID",
+                 OrgDb = org.Mm.eg.db, drop = TRUE)
+  mapped$ENTREZID
+}
+
+bladder_entrez    <- sym2entrez(bladder_genes)
+kidney_entrez     <- sym2entrez(kidney_genes)
+background_entrez <- sym2entrez(background_genes)
+
+message(sprintf("  Bladder-up: %d genes → %d Entrez IDs", length(bladder_genes), length(bladder_entrez)))
+message(sprintf("  Kidney-up : %d genes → %d Entrez IDs", length(kidney_genes),  length(kidney_entrez)))
+
+# ── GO enrichment (Biological Process) ───────────────────────────────────────
+run_go <- function(entrez_ids, label, universe = background_entrez) {
+  if (length(entrez_ids) < 5) {
+    message(sprintf("  [GO] %s: too few IDs (%d), skipping", label, length(entrez_ids)))
+    return(NULL)
+  }
+  ego <- enrichGO(
+    gene          = entrez_ids,
+    universe      = universe,
+    OrgDb         = org.Mm.eg.db,
+    ont           = "BP",
+    pAdjustMethod = "BH",
+    pvalueCutoff  = 1,
+    qvalueCutoff  = 1,
+    readable      = TRUE
+  )
+  message(sprintf("  [GO BP] %s: %d enriched terms", label, nrow(as.data.frame(ego))))
+  ego
+}
+
+go_bladder <- run_go(bladder_entrez, "bladder_up")
+go_kidney  <- run_go(kidney_entrez,  "kidney_up")
+
+# Save GO results
+if (!is.null(go_bladder) && nrow(as.data.frame(go_bladder)) > 0) {
+  write.csv(as.data.frame(go_bladder),
+            file.path(OUT_DIR, "GO_BP_BladderUp_vs_KidneyUrothelium.csv"),
+            row.names = FALSE)
+
+  p_go_bladder_dot <- dotplot(go_bladder, showCategory = 20, font.size = 9) +
+    ggtitle("GO BP: Bladder-up genes (vs Kidney urothelium)")
+  ggsave(file.path(OUT_DIR, "GO_BP_BladderUp_dotplot.pdf"),
+         plot = p_go_bladder_dot, width = 9, height = 10)
+
+  p_go_bladder_bar <- barplot(go_bladder, showCategory = 20, font.size = 9) +
+    ggtitle("GO BP: Bladder-up genes (vs Kidney urothelium)")
+  ggsave(file.path(OUT_DIR, "GO_BP_BladderUp_barplot.pdf"),
+         plot = p_go_bladder_bar, width = 9, height = 10)
+
+  message("  Saved GO BP results for bladder-up genes")
+}
+
+if (!is.null(go_kidney) && nrow(as.data.frame(go_kidney)) > 0) {
+  write.csv(as.data.frame(go_kidney),
+            file.path(OUT_DIR, "GO_BP_KidneyUp_vs_BladderUrothelium.csv"),
+            row.names = FALSE)
+
+  p_go_kidney_dot <- dotplot(go_kidney, showCategory = 20, font.size = 9) +
+    ggtitle("GO BP: Kidney-up genes (vs Bladder urothelium)")
+  ggsave(file.path(OUT_DIR, "GO_BP_KidneyUp_dotplot.pdf"),
+         plot = p_go_kidney_dot, width = 9, height = 10)
+
+  p_go_kidney_bar <- barplot(go_kidney, showCategory = 20, font.size = 9) +
+    ggtitle("GO BP: Kidney-up genes (vs Bladder urothelium)")
+  ggsave(file.path(OUT_DIR, "GO_BP_KidneyUp_barplot.pdf"),
+         plot = p_go_kidney_bar, width = 9, height = 10)
+
+  message("  Saved GO BP results for kidney-up genes")
+}
+
+# Combined GO dotplot (top 15 per direction)
+if (!is.null(go_bladder) && !is.null(go_kidney) &&
+    nrow(as.data.frame(go_bladder)) > 0 && nrow(as.data.frame(go_kidney)) > 0) {
+  go_bladder_df <- as.data.frame(go_bladder) %>%
+    arrange(p.adjust) %>% head(15) %>%
+    mutate(direction = "Bladder-up")
+  go_kidney_df <- as.data.frame(go_kidney) %>%
+    arrange(p.adjust) %>% head(15) %>%
+    mutate(direction = "Kidney-up")
+
+  go_combined <- bind_rows(go_bladder_df, go_kidney_df) %>%
+    mutate(
+      Description = factor(Description, levels = rev(unique(Description))),
+      log10_padj  = -log10(p.adjust)
+    )
+
+  p_go_combined <- ggplot(go_combined,
+    aes(x = log10_padj, y = Description, fill = direction, size = Count)) +
+    geom_point(shape = 21, alpha = 0.85) +
+    scale_fill_manual(values = c("Bladder-up" = "#E45F5F", "Kidney-up" = "#4F8FD6")) +
+    scale_size_continuous(range = c(3, 10)) +
+    labs(x = "-log10(FDR)", y = NULL,
+         title = "GO BP: Bladder vs Kidney urothelium (top 15 per direction)",
+         fill = "Direction", size = "Gene count") +
+    theme_bw(base_size = 10) +
+    theme(axis.text.y = element_text(size = 8))
+
+  ggsave(file.path(OUT_DIR, "GO_BP_Combined_BladderKidney_dotplot.pdf"),
+         plot = p_go_combined, width = 11, height = 12)
+  message("  Saved combined GO BP dotplot")
+}
+
+# ── KEGG enrichment ───────────────────────────────────────────────────────────
+run_kegg <- function(entrez_ids, label, universe = background_entrez) {
+  if (length(entrez_ids) < 5) {
+    message(sprintf("  [KEGG] %s: too few IDs (%d), skipping", label, length(entrez_ids)))
+    return(NULL)
+  }
+  ekegg <- enrichKEGG(
+    gene          = entrez_ids,
+    universe      = universe,
+    organism      = "mmu",
+    pAdjustMethod = "BH",
+    pvalueCutoff  = 1,
+    qvalueCutoff  = 1
+  )
+  message(sprintf("  [KEGG] %s: %d enriched pathways", label, nrow(as.data.frame(ekegg))))
+  ekegg
+}
+
+kegg_bladder <- run_kegg(bladder_entrez, "bladder_up")
+kegg_kidney  <- run_kegg(kidney_entrez,  "kidney_up")
+
+# Save KEGG results
+if (!is.null(kegg_bladder) && nrow(as.data.frame(kegg_bladder)) > 0) {
+  write.csv(as.data.frame(kegg_bladder),
+            file.path(OUT_DIR, "KEGG_BladderUp_vs_KidneyUrothelium.csv"),
+            row.names = FALSE)
+
+  p_kegg_bladder_dot <- dotplot(kegg_bladder, showCategory = 20, font.size = 9) +
+    ggtitle("KEGG: Bladder-up genes (vs Kidney urothelium)")
+  ggsave(file.path(OUT_DIR, "KEGG_BladderUp_dotplot.pdf"),
+         plot = p_kegg_bladder_dot, width = 9, height = 8)
+
+  p_kegg_bladder_bar <- barplot(kegg_bladder, showCategory = 20, font.size = 9) +
+    ggtitle("KEGG: Bladder-up genes (vs Kidney urothelium)")
+  ggsave(file.path(OUT_DIR, "KEGG_BladderUp_barplot.pdf"),
+         plot = p_kegg_bladder_bar, width = 9, height = 8)
+
+  message("  Saved KEGG results for bladder-up genes")
+}
+
+if (!is.null(kegg_kidney) && nrow(as.data.frame(kegg_kidney)) > 0) {
+  write.csv(as.data.frame(kegg_kidney),
+            file.path(OUT_DIR, "KEGG_KidneyUp_vs_BladderUrothelium.csv"),
+            row.names = FALSE)
+
+  p_kegg_kidney_dot <- dotplot(kegg_kidney, showCategory = 20, font.size = 9) +
+    ggtitle("KEGG: Kidney-up genes (vs Bladder urothelium)")
+  ggsave(file.path(OUT_DIR, "KEGG_KidneyUp_dotplot.pdf"),
+         plot = p_kegg_kidney_dot, width = 9, height = 8)
+
+  p_kegg_kidney_bar <- barplot(kegg_kidney, showCategory = 20, font.size = 9) +
+    ggtitle("KEGG: Kidney-up genes (vs Bladder urothelium)")
+  ggsave(file.path(OUT_DIR, "KEGG_KidneyUp_barplot.pdf"),
+         plot = p_kegg_kidney_bar, width = 9, height = 8)
+
+  message("  Saved KEGG results for kidney-up genes")
+}
+
+# Combined KEGG dotplot (top 15 per direction)
+if (!is.null(kegg_bladder) && !is.null(kegg_kidney) &&
+    nrow(as.data.frame(kegg_bladder)) > 0 && nrow(as.data.frame(kegg_kidney)) > 0) {
+  kegg_bladder_df <- as.data.frame(kegg_bladder) %>%
+    arrange(p.adjust) %>% head(15) %>%
+    mutate(direction = "Bladder-up")
+  kegg_kidney_df <- as.data.frame(kegg_kidney) %>%
+    arrange(p.adjust) %>% head(15) %>%
+    mutate(direction = "Kidney-up")
+
+  kegg_combined <- bind_rows(kegg_bladder_df, kegg_kidney_df) %>%
+    mutate(
+      Description = factor(Description, levels = rev(unique(Description))),
+      log10_padj  = -log10(p.adjust)
+    )
+
+  p_kegg_combined <- ggplot(kegg_combined,
+    aes(x = log10_padj, y = Description, fill = direction, size = Count)) +
+    geom_point(shape = 21, alpha = 0.85) +
+    scale_fill_manual(values = c("Bladder-up" = "#E45F5F", "Kidney-up" = "#4F8FD6")) +
+    scale_size_continuous(range = c(3, 10)) +
+    labs(x = "-log10(FDR)", y = NULL,
+         title = "KEGG: Bladder vs Kidney urothelium (top 15 per direction)",
+         fill = "Direction", size = "Gene count") +
+    theme_bw(base_size = 10) +
+    theme(axis.text.y = element_text(size = 8))
+
+  ggsave(file.path(OUT_DIR, "KEGG_Combined_BladderKidney_dotplot.pdf"),
+         plot = p_kegg_combined, width = 11, height = 10)
+  message("  Saved combined KEGG dotplot")
+}
+
+message("\n===== GO & KEGG enrichment complete =====")
+message(sprintf("  Outputs in: %s", OUT_DIR))
