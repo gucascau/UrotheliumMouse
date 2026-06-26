@@ -7,6 +7,10 @@ Here, we present a comprehensive single-cell and single-nucleus atlas of mouse u
 
 <img src="Figs/ATLAS.png" width="1500"/>
 
+To spatially validate and localize the urothelial cell types identified in the single-cell atlas, we profiled healthy mouse kidneys using two complementary spatial transcriptomics platforms: 10x Xenium in situ transcriptomics and 10x Visium HD. Cell type deconvolution and label transfer from the single-cell atlas confirmed the spatial distribution of umbrella, basal, and intermediate urothelial populations, anchoring the transcriptionally defined states to their native renal tissue microenvironments.
+
+<img src="Figs/RenalUrothelium_Fig2.png" width="1500"/>
+
 For more details, please find the wiki page:    
 https://github.com/gucascau/UrotheliumMouse/wiki   
 
