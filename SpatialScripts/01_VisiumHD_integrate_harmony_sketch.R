@@ -535,7 +535,116 @@ message("  Saved: ", OUT_RDS)
 message("==> Kidney HD Done.")
 
 object <- readRDS(file.path(OUT_DIR,"VisiumHD_harmony_KidneyOnlyintegrated.rds"))
+
+# We only concentrate on the UPK+ niches.
+Idents(object) <- "seurat_cluster.harmony.projected"
+# set up the order of the Identity
+ObjectIdentityOrder<-  as.character(0:12)
+# Reorder identities
+levels(object) <- ObjectIdentityOrder
+
+# we only show the identity 9
+cells_ident9 <- WhichCells(object, idents = 9)
+
+message("Images attached to object: ", paste(Images(object), collapse = ", "))
+
+UrotheliumRegionHighlighSpatialHD <- SpatialDimPlot(object,
+  cells.highlight = list(Urothelium = cells_ident9),
+  cols.highlight   = c(Urothelium = "red", Unselected = "transparent"),
+  pt.size.factor   = 3,
+  image.alpha      = 1,
+  alpha = 0.4,
+  label            = F
+) &
+  scale_fill_manual(
+    values = c(Urothelium = "red", Unselected = "transparent"),
+    labels = c(Urothelium = "Urothelium", Unselected = "NonUrothelium"),
+    name   = "Region"
+  )
+
+ggsave(file.path(OUT_DIR,"UrotheliumRegionHighlighSpatialHD.pdf"), plot = UrotheliumRegionHighlighSpatialHD, height = 8, width = 4)
+
+
 # I have the selected regions that considered as the urothelium and draw the spatialFeature of these urothelium markers
+# Urothelium markers
+UrothelialMarkers<- c("Krt5", "Krt14", "Krt20",  "Trp63", "Upk1a","Upk1b", "Upk2", "Upk3a","Upk3b", "Foxa1", "Gata3", "Pparg", "Krt8", "Krt18", "Krt19")
+
+p_UrothelialDotPlot_spatialHD <- DotPlot(object, features = UrothelialMarkers, cols = c("Spectral")) +
+  ggtitle("Urothelium markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/UrothelialMarkersDotPlot_spatialHD.pdf"),
+       plot = p_UrothelialDotPlot_spatialHD, width = 7, height = 3.5)
+
+### For the Renal cell type markers
+mouse_kidney_markers <- list(
+  Podocyte = c("Nphs1", "Nphs2", "Wt1", "Podxl"),
+  Proximal_tubule = c("Slc34a1", "Lrp2", "Cubn", "Slc5a2", "Aqp1", "Hnf4a"),
+  #Injured_repair_PT = c("Havcr1", "Lcn2", "Clu", "Spp1", "Sox9", "Vcam1", "Timp1", "Fn1"),
+  Loop_of_Henle_TAL = c("Slc12a1", "Umod", "Kcnj1", "Bsnd"),
+  DCT = c("Slc12a3", "Pvalb", "Trpm6", "Calb1"),
+  CNT = c("Calb1", "Trpv5", "Slc8a1"),
+  PrincipalCells = c("Aqp2", "Aqp3", "Aqp4", "Avpr2", "Fxyd4"),
+  Intercalated = c("Foxi1", "Atp6v1b1", "Atp6v0d2", "Slc4a1", "Slc26a4"),
+  Endothelial = c("Pecam1", "Cdh5", "Kdr", "Emcn", "Plvap"),
+  Fibroblast = c("Col1a1", "Col1a2", "Col3a1", "Dcn", "Lum", "Pdgfra"),
+  Pericyte_SMC = c("Rgs5", "Pdgfrb", "Acta2", "Tagln", "Myh11"),
+  Immune = c("Ptprc", "Lyz2", "Adgre1", "Csf1r", "Cd3d", "Cd79a"),
+)
+mouse_kidney_markers_present <- lapply(
+  mouse_kidney_markers,
+  function(x) intersect(x, rownames(object))
+)
+
+
+p_RenalCellTypeMarkersDotPlot_spatialHD <- DotPlot(object, features = mouse_kidney_markers_present, cols = c("Spectral")) +
+  ggtitle("Urothelium markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/p_RenalCellTypeMarkersDotPlot_spatialHD.pdf"),
+       plot = p_RenalCellTypeMarkersDotPlot_spatialHD, width = 15, height = 3.5)
+
+
+### For the kidney injury markers
+mouse_kidney_injury_genes <- c(
+  "Havcr1", "Lcn2", "Clu", "Sox9", "Spp1",
+  "Vcam1", "Timp1", "Fn1", "Vim", "Lgals3",
+  "Krt6a", "Krt17",
+  "Fos", "Jun", "Atf3"
+)
+
+p_InjuryMarkersDotPlot_spatialHD <- DotPlot(object, features = mouse_kidney_injury_genes, cols = c("Spectral")) +
+  ggtitle("Urothelium markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+
+
+ggsave(paste0(OUT_DIR, "/RenalInjuryMarkersDotPlot_spatialHD.pdf"),
+       plot = p_InjuryMarkersDotPlot_spatialHD, width = 9, height = 3.5)
+
+# identify all the markers that within these regions
+object <- JoinLayers(object)
+UnBiasMarkersSpatialHD <- FindAllMarkers(object, test.use = "MAST", verbose = TRUE)
+
+saveRDS(UnBiasMarkersSpatialHD, file ="UnBiasMarkersSpatialHD.rds")
+
+
 
 # Option 2: By x/y coordinate bounding box
 
@@ -651,8 +760,10 @@ SpatialFeaturePlot(urothelium,
 ggsave(file.path(OUT_DIR,"SelectedMarkersSpatialFeaturePlots_V1.pdf"), plot = SelectedMarkersSpatialFeaturePlots1, height = 15, width = 4)
 
 
+# I want to perform a deconvolution for the spatial HD in the Kidney 
+# Here we manually corrected the urothleium cells but keep the other cell types
 
-
+# 
 
 
 
