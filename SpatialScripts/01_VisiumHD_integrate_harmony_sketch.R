@@ -601,10 +601,10 @@ mouse_kidney_markers_present <- lapply(
   mouse_kidney_markers,
   function(x) intersect(x, rownames(object))
 )
-
+mouse_kidney_markers_present<- c("Slc34a1", "Lrp2", "Cubn", "Slc12a1", "Umod", "Kcnj1","Slc12a3", "Pvalb", "Trpm6", "Calb1", "Trpv5", "Slc8a1","Aqp2", "Aqp3", "Aqp4","Atp6v1b1", "Atp6v0d2", "Slc4a1","Pecam1", "Cdh5", "Kdr", "Col1a2", "Col3a1", "Dcn","Acta2", "Tagln", "Myh11","Ptprc", "Lyz2", "Adgre1", "Csf1r", "Cd3d", "Cd79a")
 
 p_RenalCellTypeMarkersDotPlot_spatialHD <- DotPlot(object, features = mouse_kidney_markers_present, cols = c("Spectral")) +
-  ggtitle("Urothelium markers") +
+  ggtitle("Renal Cell Type markers") +
   RotatedAxis() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(
@@ -613,20 +613,20 @@ p_RenalCellTypeMarkersDotPlot_spatialHD <- DotPlot(object, features = mouse_kidn
   )
 
 
-ggsave(paste0(OUT_DIR, "/p_RenalCellTypeMarkersDotPlot_spatialHD.pdf"),
-       plot = p_RenalCellTypeMarkersDotPlot_spatialHD, width = 15, height = 3.5)
+ggsave(paste0(OUT_DIR, "/RenalCellTypeMarkersDotPlot_spatialHD.pdf"),
+       plot = p_RenalCellTypeMarkersDotPlot_spatialHD, width = 9, height = 4)
 
 
 ### For the kidney injury markers
 mouse_kidney_injury_genes <- c(
-  "Havcr1", "Lcn2", "Clu", "Sox9", "Spp1",
-  "Vcam1", "Timp1", "Fn1", "Vim", "Lgals3",
+  "Spp1", "Havcr1", "Lcn2", "Clu", "Sox9", 
+  "Vcam1", "Timp1", "Fn1", "Vim",
   "Krt6a", "Krt17",
   "Fos", "Jun", "Atf3"
 )
 
 p_InjuryMarkersDotPlot_spatialHD <- DotPlot(object, features = mouse_kidney_injury_genes, cols = c("Spectral")) +
-  ggtitle("Urothelium markers") +
+  ggtitle("Injury markers") +
   RotatedAxis() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(
@@ -636,14 +636,53 @@ p_InjuryMarkersDotPlot_spatialHD <- DotPlot(object, features = mouse_kidney_inju
 
 
 ggsave(paste0(OUT_DIR, "/RenalInjuryMarkersDotPlot_spatialHD.pdf"),
-       plot = p_InjuryMarkersDotPlot_spatialHD, width = 9, height = 3.5)
+       plot = p_InjuryMarkersDotPlot_spatialHD, width = 6, height = 3.5)
 
 # identify all the markers that within these regions
 object <- JoinLayers(object)
 UnBiasMarkersSpatialHD <- FindAllMarkers(object, test.use = "MAST", verbose = TRUE)
 
 saveRDS(UnBiasMarkersSpatialHD, file ="UnBiasMarkersSpatialHD.rds")
+UnBiasMarkersSpatialHD<- readRDS("UnBiasMarkersSpatialHD.rds")
+# check the top 10 markers for each cluster, sorted by avg_log2FC, p adjust, and pct. expressed
+top50_markers <- UnBiasMarkersSpatialHD %>%
+  filter(p_val_adj < 0.05, avg_log2FC > 0) %>%
+  group_by(cluster) %>%
+  arrange(desc(avg_log2FC), p_val_adj, desc(pct.1), .by_group = TRUE) %>%
+  slice_head(n = 50) %>%
+  ungroup() 
 
+NovelMarkers<- UnBiasMarkersSpatialHD %>%
+  filter(p_val_adj < 0.05, avg_log2FC > 0) %>%
+  group_by(cluster) %>%
+  arrange(desc(avg_log2FC), p_val_adj, desc(pct.1), .by_group = TRUE) %>% filter(cluster == 9 & pct.1 >0.1 & pct.2 <0.05 & avg_log2FC > 0.5) %>% filter(!gene %in% UrothelialMarkers)%>% arrange(desc(pct.1), desc(avg_log2FC))  %>% slice_head(n = 15) %>% ungroup()
+
+
+p_NovelBiomarkersDotPlot_spatialHD <- DotPlot(object, features = NovelMarkers$gene, cols = c("Spectral")) +
+  ggtitle("Novel Candidate markers") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+ggsave(paste0(OUT_DIR, "/RenalNovelMarkersDotPlot_spatialHD.pdf"),
+       plot = p_NovelBiomarkersDotPlot_spatialHD, width = 6, height = 3.5)
+
+# Upper-tract/renal-associated genes:
+
+UpperRenalAssociatedGenes <- c("Pax8", "Pax2", "Glis3", "Fgfr2","Pkhd1", "Bicc1", "Magi1","Cgnl1", "Ptpn14","Col4a3", "Col4a4", "Col4a5")
+
+p_UpperRenalAssociatedGenesDotPlot_spatialHD <- DotPlot(object, features = UpperRenalAssociatedGenes, cols = c("Spectral")) +
+  ggtitle("Upper-Renal Associated Genes") +
+  RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )
+ggsave(paste0(OUT_DIR, "/RenalUpperRenalAssociatedGenesDotPlot_spatialHD.pdf"),
+       plot = p_UpperRenalAssociatedGenesDotPlot_spatialHD, width = 6, height = 4)
 
 
 # Option 2: By x/y coordinate bounding box
