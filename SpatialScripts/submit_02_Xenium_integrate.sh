@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=xenium_integrate
-#SBATCH --output=logs/xenium_integrate_%j.out
-#SBATCH --error=logs/xenium_integrate_%j.err
+#SBATCH --output=/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/SpatialScripts/logs/xenium_integrate_%j.out
+#SBATCH --error=/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/SpatialScripts/logs/xenium_integrate_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=20
 #SBATCH --mem=700G
@@ -10,13 +10,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/SpatialScripts"
 mkdir -p "${SCRIPT_DIR}/logs"
 mkdir -p "${SCRIPT_DIR}/output"
-
-echo "Job started: $(date)"
-echo "Node: ${SLURM_NODELIST}"
-echo "CPUs: ${SLURM_CPUS_PER_TASK}"
 
 module purge
 module load GCC/9.3.0 OpenMPI/4.0.3 R/4.4.0

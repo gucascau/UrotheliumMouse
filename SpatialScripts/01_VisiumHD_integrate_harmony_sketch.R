@@ -536,6 +536,8 @@ message("==> Kidney HD Done.")
 
 object <- readRDS(file.path(OUT_DIR,"VisiumHD_harmony_KidneyOnlyintegrated.rds"))
 
+object <- JoinLayers(object, assay = "Spatial.008um")
+
 # We only concentrate on the UPK+ niches.
 Idents(object) <- "seurat_cluster.harmony.projected"
 # set up the order of the Identity
@@ -577,10 +579,25 @@ p_UrothelialDotPlot_spatialHD <- DotPlot(object, features = UrothelialMarkers, c
     color = guide_colorbar(title = "AveExp"),
     size  = guide_legend(title = "PerExp")
   )
-
-
 ggsave(paste0(OUT_DIR, "/UrothelialMarkersDotPlot_spatialHD.pdf"),
        plot = p_UrothelialDotPlot_spatialHD, width = 7, height = 3.5)
+
+dir.create(file.path(OUT_DIR, "SpatialFeature"), showWarnings = FALSE, recursive = TRUE)
+# Generete the spatial feature plot for the urothelium markers
+for (gene in UrothelialMarkers) {
+  #expr <- FetchData(object, vars = gene, layer = "data")[, 1]
+  #object$plot_gene <- ifelse(expr > 0, expr, NA)
+
+  p <- SpatialFeaturePlot(object, features = gene, pt.size.factor = 3, image.alpha = 1) +
+  ggtitle(paste("Spatial Feature:", gene)) &
+  scale_fill_gradientn(
+    colors   = c("#FFFFD4", "#FED98E", "#FE8929", "#CC4C02"),
+    na.value = "transparent"
+  )
+  ggsave(paste0(OUT_DIR, "/SpatialFeature/SpatialFeature_", gene, "_spatialHD.pdf"), plot = p, width = 6, height = 5)
+}
+
+
 
 ### For the Renal cell type markers
 mouse_kidney_markers <- list(
@@ -633,17 +650,24 @@ p_InjuryMarkersDotPlot_spatialHD <- DotPlot(object, features = mouse_kidney_inju
     color = guide_colorbar(title = "AveExp"),
     size  = guide_legend(title = "PerExp")
   )
-
+dir.create(file.path(OUT_DIR, "SpatialFeature"), showWarnings = FALSE, recursive = TRUE)
+# Generete the spatial feature plot for the urothelium markers
 
 ggsave(paste0(OUT_DIR, "/RenalInjuryMarkersDotPlot_spatialHD.pdf"),
        plot = p_InjuryMarkersDotPlot_spatialHD, width = 6, height = 3.5)
+
+for (gene in mouse_kidney_injury_genes) {
+  p <- SpatialFeaturePlot(object, features = gene, pt.size.factor = 3, image.alpha = 1,   alpha = 0.4) +
+    ggtitle(paste("Spatial Feature:", gene))
+  ggsave(paste0(OUT_DIR, "/SpatialFeature/SpatialFeature_", gene, "_spatialHD.pdf"), plot = p, width = 6, height = 5)
+}
 
 # identify all the markers that within these regions
 object <- JoinLayers(object)
 UnBiasMarkersSpatialHD <- FindAllMarkers(object, test.use = "MAST", verbose = TRUE)
 
 saveRDS(UnBiasMarkersSpatialHD, file ="UnBiasMarkersSpatialHD.rds")
-UnBiasMarkersSpatialHD<- readRDS("UnBiasMarkersSpatialHD.rds")
+UnBiasMarkersSpatialHD<- readRDS(file.path(OUT_DIR, "UnBiasMarkersSpatialHD.rds"))
 # check the top 10 markers for each cluster, sorted by avg_log2FC, p adjust, and pct. expressed
 top50_markers <- UnBiasMarkersSpatialHD %>%
   filter(p_val_adj < 0.05, avg_log2FC > 0) %>%
@@ -669,8 +693,22 @@ p_NovelBiomarkersDotPlot_spatialHD <- DotPlot(object, features = NovelMarkers$ge
 ggsave(paste0(OUT_DIR, "/RenalNovelMarkersDotPlot_spatialHD.pdf"),
        plot = p_NovelBiomarkersDotPlot_spatialHD, width = 6, height = 3.5)
 
-# Upper-tract/renal-associated genes:
+# for the top novel markers
+for (gene in NovelMarkers$gene) {
+  expr <- GetAssayData(object, assay = "Spatial.008um", layer = "data")[gene, ]
+object$plot_gene <- ifelse(expr > 0, expr, NA)
 
+  p <- SpatialFeaturePlot(object, features = "plot_gene", pt.size.factor = 3, image.alpha = 1) +
+  ggtitle(paste("Spatial Feature:", gene)) +
+  scale_fill_gradientn(
+    colors   = c("#FFFFD4", "#FED98E", "#FE8929", "#CC4C02"),
+    na.value = "transparent"
+  )
+  ggsave(paste0(OUT_DIR, "/SpatialFeature/SpatialFeature_", gene, "_spatialHD.pdf"), plot = p, width = 6, height = 5)
+}
+
+
+# Upper-tract/renal-associated genes:
 UpperRenalAssociatedGenes <- c("Pax8", "Pax2", "Glis3", "Fgfr2","Pkhd1", "Bicc1", "Magi1","Cgnl1", "Ptpn14","Col4a3", "Col4a4", "Col4a5")
 
 p_UpperRenalAssociatedGenesDotPlot_spatialHD <- DotPlot(object, features = UpperRenalAssociatedGenes, cols = c("Spectral")) +
@@ -683,6 +721,9 @@ p_UpperRenalAssociatedGenesDotPlot_spatialHD <- DotPlot(object, features = Upper
   )
 ggsave(paste0(OUT_DIR, "/RenalUpperRenalAssociatedGenesDotPlot_spatialHD.pdf"),
        plot = p_UpperRenalAssociatedGenesDotPlot_spatialHD, width = 6, height = 4)
+
+# Functional enrichment analysis of DEGs from the cluster comparisions.
+
 
 
 # Option 2: By x/y coordinate bounding box
@@ -876,14 +917,6 @@ DeconvCelltypeSpatialPlot <- SpatialDimPlot(object,
 
 ggsave(file.path(OUT_DIR, "DeconvCelltypeSpatialPlot.pdf"),
        plot = DeconvCelltypeSpatialPlot, height = 6, width = 8)
-
-
-
-
-
-
-
-
 
 
 # Option 1: From exported barcodes (Loupe Browser / browser tool)
