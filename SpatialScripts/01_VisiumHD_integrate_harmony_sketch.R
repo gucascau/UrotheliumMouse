@@ -27,6 +27,12 @@ library(ggplot2)
 library(patchwork)
 library(dplyr)
 library(jsonlite)
+library(ggplot2)
+# BiocManager::install("SpatialExperiment")
+library(SpatialExperiment)
+library(SummarizedExperiment)
+
+library(spacexr)
 
 options(future.globals.maxSize = 16 * 1024^3)
 
@@ -235,6 +241,11 @@ SpatialFeaturePlot(obj_emtab,
 
 obj_kidney3p <- load_visiumhd(KIDNEY3P_DIR,   "Visium_HD_3prime_Kidney")
 obj_kidney   <- load_visiumhd(KIDNEY_DIR,     "Visium_HD_Kidney")
+
+# save them into RDS files for later use
+saveRDS(obj_emtab, file = "obj_emtab.rds")
+saveRDS(obj_kidney3p, file = "obj_kidney3p.rds")
+saveRDS(obj_kidney, file = "obj_kidney.rds")
 
 # ── Step 4: Merge → Normalize → Variable Features → Scale ─────────────────────
 message("==> Merging datasets ...")
@@ -534,9 +545,94 @@ message("  Saved: ", OUT_RDS)
 
 message("==> Kidney HD Done.")
 
+message("==> Running Kidney cell deconvolution:")
+
 object <- readRDS(file.path(OUT_DIR,"VisiumHD_harmony_KidneyOnlyintegrated.rds"))
 
+all_images <- Images(object)
+
 object <- JoinLayers(object, assay = "Spatial.008um")
+
+# ── Build the RCTD reference from the annotated kidney scRNA allcells object ──
+# celltype_final is the harmonized cell-type call, but only ~18% of cells have
+# it filled in (the rest are NA) — RCTD needs a fully-labeled reference, so we
+# restrict to the annotated subset.
+KIDNEY_REF_RDS <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/RenalUrotheliumScripts/output/RenalUrothelium_allcells_scvi_annotations_meta_uro_updated.rds"
+
+ref_so <- readRDS(KIDNEY_REF_RDS)
+# annotation is final_annotation_with_uro
+ref_counts   <- GetAssayData(ref_so, assay = "RNA", layer = "counts")
+# ref_celltype <- setNames(droplevels(as.factor(ref_so$final_annotation_with_uro)), colnames(ref_so))
+# Extract cell type annotations from the metadata (replace 'cell_type' with your actual metadata column name)
+cell_types <- as.factor(ref_so$final_annotation_with_uro)
+names(cell_types) <- colnames(ref_so)
+# Ensure cell types are named vectors and drop any unused levels
+cell_types <- droplevels(cell_types)
+
+# Calculate nUMI (total counts per cell)
+nUMI <- colSums(ref_counts)
+
+# Build the RCTD Reference object
+rctd_ref <- spacexr::Reference(counts = ref_counts, cell_types = cell_types, nUMI = nUMI,   min_UMI    = 1, n_max_cells  = Inf)
+
+rm(ref_counts, nUMI, ref_so); gc()
+
+# Examine reference. (optional)
+print(dim(assay(rctd_ref))) # Gene expression matrix dimensions
+#> [1] 750  75
+table(colData(rctd_ref)$cell_types) # Number of occurrences of each cell type
+#> 
+dim(rctd_ref@counts)        # gene × cell dimensions
+length(rctd_ref@cell_types) # number of cells
+table(rctd_ref@cell_types)  # cells per type
+head(rctd_ref@nUMI)         # nUMI per cellust@1120
+
+
+# ── Build the SpatialRNA query from the non-urothelium kidney3p bins ─────────
+# Restrict to the "slice1.008um" image (kidney3p sample), matching the scope
+# of the urothelium correction above; the manually-called urothelium bins
+# (common_cells) are excluded and keep their manual label instead of RCTD's.
+slice_coords <- GetTissueCoordinates(object, image = "slice1.008um", which = "centroids")
+
+spatial_counts <- GetAssayData(object, assay = "Spatial.008um", layer = "counts")
+
+spatial_coords <- slice_coords[match(colnames(spatial_counts), slice_coords$cell), c("x", "y")]
+rownames(spatial_coords) <- colnames(spatial_counts)
+spatial_nUMI <- colSums(spatial_counts)
+
+query <- SpatialRNA(spatial_coords, spatial_counts, spatial_nUMI)
+
+# ── Run RCTD ──────────────────────────────────────────────────────────────────
+# "full" mode: 8 um bins are far smaller than a cell, so each bin can be a
+# mixture of many cell types rather than the 1-2 assumed by "doublet" mode.
+myRCTD <- create.RCTD(query, rctd_ref, max_cores = 8, CELL_MIN_INSTANCE = 1)
+
+myRCTD <- run.RCTD(myRCTD, doublet_mode = "full")
+
+rctd_weights <- as.matrix(normalize_weights(myRCTD@results$weights))
+colnames(rctd_weights) <- paste0("rctd_", colnames(rctd_weights))
+
+obj_nonuro <- AddMetaData(obj_nonuro, as.data.frame(rctd_weights))
+obj_nonuro$rctd_dominant_celltype <- sub(
+  "^rctd_", "",
+  colnames(rctd_weights)[max.col(rctd_weights, ties.method = "first")]
+)
+
+#saveRDS(myRCTD, file.path(OUT_DIR, "kidney3p_nonurothelium_RCTD.rds"))
+saveRDS(object, file.path(OUT_DIR, "VisiumHD_kidney3p_urothelium_deconvolved.rds"))
+
+DeconvCelltypeSpatialPlot <- SpatialDimPlot(object,
+  group.by       = "deconv_celltype",
+  images         = "slice1.008um",
+  crop           = TRUE,
+  pt.size.factor = 2,
+  image.alpha    = 1
+) + theme(legend.position = "right")
+
+ggsave(file.path(OUT_DIR, "DeconvCelltypeSpatialPlot.pdf"),
+       plot = DeconvCelltypeSpatialPlot, height = 6, width = 8)
+message("==> Kidney cell deconvolution done. Saved: ", file.path(OUT_DIR, "VisiumHD_kidney3p_urothelium_deconvolved.rds"))
+
 
 # We only concentrate on the UPK+ niches.
 Idents(object) <- "seurat_cluster.harmony.projected"
@@ -544,6 +640,7 @@ Idents(object) <- "seurat_cluster.harmony.projected"
 ObjectIdentityOrder<-  as.character(0:12)
 # Reorder identities
 levels(object) <- ObjectIdentityOrder
+
 
 # we only show the identity 9
 cells_ident9 <- WhichCells(object, idents = 9)
@@ -846,77 +943,6 @@ ggsave(file.path(OUT_DIR,"SelectedMarkersSpatialFeaturePlots_V1.pdf"), plot = Se
 suppressPackageStartupMessages({
   library(spacexr)
 })
-
-# ── Build the RCTD reference from the annotated kidney scRNA allcells object ──
-# celltype_final is the harmonized cell-type call, but only ~18% of cells have
-# it filled in (the rest are NA) — RCTD needs a fully-labeled reference, so we
-# restrict to the annotated subset.
-KIDNEY_REF_RDS <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/RenalUrotheliumScripts/output/RenalUrothelium_allcells_scvi_annotations.rds"
-
-ref_so <- readRDS(KIDNEY_REF_RDS)
-ref_so <- subset(ref_so, cells = colnames(ref_so)[!is.na(ref_so$celltype_final)])
-
-ref_counts   <- GetAssayData(ref_so, assay = "RNA", layer = "counts")
-ref_celltype <- setNames(droplevels(as.factor(ref_so$celltype_final)), colnames(ref_so))
-ref_nUMI     <- colSums(ref_counts)
-
-reference <- Reference(ref_counts, ref_celltype, ref_nUMI)
-rm(ref_so, ref_counts); gc()
-
-# ── Build the SpatialRNA query from the non-urothelium kidney3p bins ─────────
-# Restrict to the "slice1.008um" image (kidney3p sample), matching the scope
-# of the urothelium correction above; the manually-called urothelium bins
-# (common_cells) are excluded and keep their manual label instead of RCTD's.
-slice_coords <- GetTissueCoordinates(object, image = "slice1.008um", which = "centroids")
-nonuro_cells <- setdiff(slice_coords$cell, common_cells)
-
-obj_nonuro <- object
-DefaultAssay(obj_nonuro) <- "Spatial.008um"
-obj_nonuro@graphs <- list()
-obj_nonuro <- subset(obj_nonuro, cells = nonuro_cells)
-obj_nonuro <- JoinLayers(obj_nonuro)
-
-spatial_counts <- GetAssayData(obj_nonuro, assay = "Spatial.008um", layer = "counts")
-
-spatial_coords <- slice_coords[match(colnames(spatial_counts), slice_coords$cell), c("x", "y")]
-rownames(spatial_coords) <- colnames(spatial_counts)
-spatial_nUMI <- colSums(spatial_counts)
-
-query <- SpatialRNA(spatial_coords, spatial_counts, spatial_nUMI)
-
-# ── Run RCTD ──────────────────────────────────────────────────────────────────
-# "full" mode: 8 um bins are far smaller than a cell, so each bin can be a
-# mixture of many cell types rather than the 1-2 assumed by "doublet" mode.
-myRCTD <- create.RCTD(query, reference, max_cores = 8)
-myRCTD <- run.RCTD(myRCTD, doublet_mode = "full")
-
-rctd_weights <- as.matrix(normalize_weights(myRCTD@results$weights))
-colnames(rctd_weights) <- paste0("rctd_", colnames(rctd_weights))
-
-obj_nonuro <- AddMetaData(obj_nonuro, as.data.frame(rctd_weights))
-obj_nonuro$rctd_dominant_celltype <- sub(
-  "^rctd_", "",
-  colnames(rctd_weights)[max.col(rctd_weights, ties.method = "first")]
-)
-
-# ── Merge the manual urothelium call back with the RCTD calls ────────────────
-object$deconv_celltype <- NA_character_
-object$deconv_celltype[common_cells]         <- "Urothelium"
-object$deconv_celltype[colnames(obj_nonuro)] <- obj_nonuro$rctd_dominant_celltype
-
-saveRDS(myRCTD, file.path(OUT_DIR, "kidney3p_nonurothelium_RCTD.rds"))
-saveRDS(object, file.path(OUT_DIR, "VisiumHD_kidney3p_urothelium_deconvolved.rds"))
-
-DeconvCelltypeSpatialPlot <- SpatialDimPlot(object,
-  group.by       = "deconv_celltype",
-  images         = "slice1.008um",
-  crop           = TRUE,
-  pt.size.factor = 2,
-  image.alpha    = 1
-) + theme(legend.position = "right")
-
-ggsave(file.path(OUT_DIR, "DeconvCelltypeSpatialPlot.pdf"),
-       plot = DeconvCelltypeSpatialPlot, height = 6, width = 8)
 
 
 # Option 1: From exported barcodes (Loupe Browser / browser tool)

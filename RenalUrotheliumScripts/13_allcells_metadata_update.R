@@ -26,7 +26,7 @@ IN_PATH  <- file.path(OUT_DIR, "RenalUrothelium_allcells_scvi_annotations.rds")
 OUT_PATH <- file.path(OUT_DIR, "RenalUrothelium_allcells_scvi_annotations_metaupdated.rds")
 
 GSE190887_CSV <- "/home/gdbecknelllab/xxw004/gdjacksonlab/UUO/Datasets/Mouse/UUO_CellMeta2022/GSE190887_meta_cell_type_sample.csv"
-FINAL_META_CSV <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/FinalUrotheliumCells/UrotheliumScripts/output/AllUrothelium_metadata_correlations/MetaDataCorrectedFinalVersion.csv"
+FINAL_META_CSV <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/FinalUrotheliumCells/UrotheliumScripts/output/AllUrothelium_metadata_correlations/MetaDataCorrectedFinalVersion_Update_07052026.csv"
 
 ################################################################################
 # STEP 1: Load the all-cells object
@@ -35,6 +35,7 @@ FINAL_META_CSV <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/FinalU
 cat("Reading", IN_PATH, "\n")
 so <- readRDS(IN_PATH)
 cat("  Cells:", ncol(so), "\n")
+
 
 ################################################################################
 # STEP 2: Resolve the ambiguous raw sample_id groups (Urotherlium/D1/D2/UUO)
@@ -83,6 +84,24 @@ so@meta.data <- so@meta.data %>% mutate(orig.ident = case_when(
 cat("  sample_id table after remapping:\n")
 print(so@meta.data$sample_id %>% table())
 
+# Check the metadata that we used for orig.ident and sample_id
+cat("  sample_id table before remapping:\n")
+print(so@meta.data$sample_id %>% table())
+cat("  orig.ident table before remapping:\n")
+print(so@meta.data$orig.ident %>% table())
+so@meta.data$orig.ident %>% unique() %>% sort() %>% print()
+
+# Before we applied the left_join of the Final* metadata, we need to remove the duplicated barcodes in the meta data, and keep the one with the correct sample_id, cells with sample_id "MouseKidneyATLAS_MKA_updated" are the duplicated one, we need to remove them from object, and keep the one with the correct sample_id
+# there are some discrepancies in the sample_id and our meta data
+so@meta.data %>% filter(grepl("MouseKidneyATLAS_MKA_updated", sample_id)) %>% head()
+
+# check whether there are double ACCCACTCATTTGCTT
+so@meta.data %>% filter(grepl("ACCCACTCATTTGCTT", rownames(so@meta.data))) %>% head()
+so@meta.data %>% filter(grepl("TCGCGTTCAGCATGAG", rownames(so@meta.data))) %>% head()
+# we need to remove the duplicated barcodes in the meta data, and keep the one with the correct sample_id, cells with sample_id "MouseKidneyATLAS_MKA_updated" are the duplicated one, we need to remove them from object, and keep the one with the correct sample_id
+so <- so[, !grepl("MouseKidneyATLAS_MKA_updated", so@meta.data$sample_id)]
+
+
 ################################################################################
 # STEP 3: Left-join the harmonized Final* metadata columns by sample_id
 ################################################################################
@@ -109,6 +128,38 @@ print(unmatched)
 
 cat("\nsample_id values present in object but absent from the Final metadata CSV:\n")
 print(setdiff(unique(so@meta.data$sample_id), unique(UpdateMetaData$sample_id)))
+
+################################################################################
+# STEP 5: Check the Final* columns for NA values (should be none, except for the unmatched sample_id groups above)
+# Check the final annotation columns for NA values (should be none, except for the unmatched sample_id groups above)
+################################################################################
+# Check the Final* columns for NA values (should be none, except for the unmatched sample_id groups above)
+library(tidyr)
+una_final_cols <- so@meta.data %>%
+  select(starts_with("Final")) %>%
+  summarise_all(~ sum(is.na(.))) %>%
+  pivot_longer(everything(), names_to = "column", values_to = "num_na") %>%
+  filter(num_na > 0)
+
+so@meta.data %>% filter(is.na(Finalgsm_id)) %>% count(sample_id, sort = TRUE) %>% print()
+# Check the annotation columns for NA values (should be none, except for the unmatched sample_id groups above), the column name contain annotation, so we can use the grepl to filter the column name
+colnames(so@meta.data)
+so@meta.data %>% head()
+so@meta.data %>% select(matches("celltype|MKA|Lake|cell_type|suspension_type|scanvi")) %>% head()
+
+# print out the MKA and Lake annotation numbers
+so@meta.data %>% count(scanvi_MKA_label, sort = TRUE) %>% print()
+so@meta.data %>% count(scanvi_Lake_label, sort = TRUE) %>% print()
+
+# we finally used MKA label as the final annotation, so we can check the MKA label for NA values
+so@meta.data %>% filter(is.na(scanvi_MKA_label)) %>% count(sample_id, sort = TRUE) %>% print()
+
+
+unannotated_cols <- so@meta.data %>%
+  select(where(~ grepl("annotation", .))) %>%
+  summarise_all(~ sum(is.na(.))) %>%
+  pivot_longer(everything(), names_to = "column", values_to = "num_na") %>%
+  filter(num_na > 0)
 
 ################################################################################
 # Save

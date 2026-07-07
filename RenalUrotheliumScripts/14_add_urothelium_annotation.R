@@ -6,7 +6,7 @@
 # object) back onto the full all-cells kidney object, matched by cell barcode.
 #
 # Input  : output/RenalUrothelium_allcells_scvi_annotations_metaupdated.rds
-#          /vast0/.../FinalUrotheliumCells/RenalUrothelium_uro_cells_fullgene_scvi_metacorrection.rds
+#          /vast0/.../FinalUrotheliumCells/RenalUrothelium_allcells_scvi_annotations_metaupdated.rds
 # Output : output/RenalUrothelium_allcells_scvi_annotations_meta_uro_updated.rds
 ################################################################################
 
@@ -36,9 +36,14 @@ cat("Reading", IN_PATH, "\n")
 so <- readRDS(IN_PATH)
 cat("  all-cells:", ncol(so), "cells\n")
 
+# we used the scanvi_MKA_label column as cell type annotation and add urothelium to replace the scanvi_MKA_label annotation,
+
 cat("Reading", URO_PATH, "\n")
 uro <- readRDS(URO_PATH)
 cat("  urothelium:", ncol(uro), "cells\n")
+
+# check the urothelium cell name is consistent with the all-cells object, and the urothelium annotation columns are present
+uro@meta.data %>% head()
 
 missing_cols <- setdiff(URO_COLS, colnames(uro@meta.data))
 if (length(missing_cols) > 0) {
@@ -50,7 +55,10 @@ if (length(missing_cols) > 0) {
 # STEP 2: Match urothelium cells into the all-cells object by barcode
 ################################################################################
 
+# check the matched cells
 matched <- intersect(colnames(so), colnames(uro))
+# number of matched cells
+length(matched)
 cat(sprintf("  %d / %d urothelium cells matched to all-cells barcodes\n",
             length(matched), ncol(uro)))
 if (length(matched) < ncol(uro)) {
@@ -74,11 +82,16 @@ print(so@meta.data %>%
   filter(strict_urothelium) %>%
   summarise(umbrella = sum(uro_umbrella_arm), basal = sum(uro_basal_arm),
             intermediate = sum(uro_intermediate_arm)))
+# add the final urothelium annotation to final annotation with urotheulium, we will use the scanvi_MKA_label as the final annotation, and add the urothelium annotation to it
+so@meta.data <- so@meta.data %>% mutate(final_annotation_with_uro = case_when(strict_urothelium ~ "Urothelium", TRUE ~ scanvi_MKA_label))
+
+so@meta.data%>%
+  count(final_annotation_with_uro, sort = TRUE) %>%
+  print()
 
 ################################################################################
 # Save
 ################################################################################
-
 cat("\nSaving to", OUT_PATH, "\n")
 saveRDS(so, OUT_PATH)
 cat("Done.\n")

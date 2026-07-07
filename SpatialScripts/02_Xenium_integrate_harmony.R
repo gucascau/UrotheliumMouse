@@ -1,38 +1,29 @@
 ################################################################################
 # 02_Xenium_integrate_harmony.R
 #
-# Integrate 12 Xenium mouse kidney samples (UUO time-course) with Harmony:
+# Integrate 12 Xenium mouse kidney UUO time-course samples with Harmony,
+# then transfer cell type labels from two references separately:
+#   - MKA_seurat.rds       (MouseKidneyATLAS, author_cell_type)
+#   - LakesnRNA_seurat.rds (Lake IRI snRNA-seq, SubclassLevel1 + SubclassLevel3)
 #
-#   GSM8325615  ShamL   — sham,   left  kidney
-#   GSM8325616  ShamR   — sham,   right kidney
-#   GSM8325617  Hour4L  — 4 h UUO,  left
-#   GSM8325618  Hour4R  — 4 h UUO,  right
-#   GSM8325619  Hour12L — 12 h UUO, left
-#   GSM8325620  Hour12R — 12 h UUO, right
-#   GSM8325621  Day2L   — day 2 UUO, left
-#   GSM8325622  Day2R   — day 2 UUO, right
-#   GSM8325623  Day14L  — day 14 UUO, left
-#   GSM8325624  Day14R  — day 14 UUO, right
-#   GSM8325625  Week6L  — week 6 UUO, left
-#   GSM8325626  Week6R  — week 6 UUO, right
+# Samples:
+#   GSM8325615  ShamL    GSM8325616  ShamR
+#   GSM8325617  Hour4L   GSM8325618  Hour4R
+#   GSM8325619  Hour12L  GSM8325620  Hour12R
+#   GSM8325621  Day2L    GSM8325622  Day2R
+#   GSM8325623  Day14L   GSM8325624  Day14R
+#   GSM8325625  Week6L   GSM8325626  Week6R
 #
-# Protocol reference:
-#   10X Genomics Xenium 5K analysis journey (Seurat-based workflow)
-#   https://satijalab.org/seurat/articles/seurat5_spatial_vignette_2
-#   https://colab.research.google.com/github/10XGenomics/analysis_guides/blob/main/Xenium_5k_data_analysis_journey.ipynb#scrollTo=V7gqfNcdKraN
-#
-# Steps:
-#   1.  Extract *_output.tar.gz archives if not already done
-#   2.  LoadXenium() per sample + QC filter (nCount_Xenium > 5, nFeature > 3)
-#   3.  Merge all 12 samples
-#   4.  SCTransform (assay = "Xenium")
-#   5.  SketchData (LeverageScore, 5 000 cells per sample)
-#   6.  RunPCA on sketch using all features
-#   7.  RunHarmony on sketch (batch = sample_id)
-#   8.  FindNeighbors + FindClusters + RunUMAP (harmony embedding)
-#   9.  ProjectData back to full dataset
-#  10.  Spatial + UMAP visualizations → PDF
-#  11.  Save integrated object
+# Pipeline (following published IRI Xenium workflow):
+#   1.  LoadXenium() per sample + QC filter (nCount > 10, nFeature > 3)
+#   2.  Merge all 12 samples
+#   3.  NormalizeData (scale.factor = 100) — simple log-norm, no SCTransform
+#   4.  ScaleData + RunPCA on all ~300 Xenium genes (no sketching)
+#   5.  RunHarmony (batch = sample_id) on all cells
+#   6.  FindNeighbors + FindClusters + RunUMAP
+#   7.  Label transfer from MKA reference  -> MKA_celltype
+#   8.  Label transfer from Lake reference -> Lake_SubclassLevel1, Lake_SubclassLevel3
+#   9.  Save integrated object + plots
 ################################################################################
 
 library(Seurat)
@@ -49,17 +40,18 @@ log_mem <- function(label) {
   message(sprintf("  [mem] %s: %.1f GB in use", label, mb / 1024))
 }
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# ── Paths ──────────────────────────────────────────────────────────────────────
 XEN_BASE <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSpatialData/Xenium"
+REF_MKA  <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/reference/MKA_seurat.rds"
+REF_LAKE <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/reference/LakesnRNA_seurat.rds"
 
-OUT_DIR <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/SpatialScripts/output"
+OUT_DIR  <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/SpatialScripts/output"
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
-OUT_RDS <- file.path(OUT_DIR, "Xenium_harmony_integrated.rds")
-OUT_PDF <- file.path(OUT_DIR, "Xenium_harmony_clusters.pdf")
+OUT_RDS  <- file.path(OUT_DIR, "Xenium_harmony_integrated.rds")
+OUT_PDF  <- file.path(OUT_DIR, "Xenium_harmony_clusters.pdf")
 
-# ── Sample manifest ───────────────────────────────────────────────────────────
-# inner_dir: the directory name packed inside each *_output.tar.gz
+# ── Sample manifest ────────────────────────────────────────────────────────────
 sample_meta <- data.frame(
   gsm       = c("GSM8325615","GSM8325616","GSM8325617","GSM8325618",
                 "GSM8325619","GSM8325620","GSM8325621","GSM8325622",
@@ -71,6 +63,9 @@ sample_meta <- data.frame(
                 "Hour12","Hour12","Day2","Day2",
                 "Day14","Day14","Week6","Week6"),
   side      = c("L","R","L","R","L","R","L","R","L","R","L","R"),
+  chip      = c("0005295","0005295","0005161","0005161",
+                "0005295","0005295","0005161","0005161",
+                "0005161","0005161","0005295","0005295"),
   inner_dir = c(
     "ShamL-output-XETG00063__0005295__Region_5__20230717__191520",
     "ShamR-output-XETG00063__0005295__Region_6__20230717__191520",
@@ -88,26 +83,22 @@ sample_meta <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# ── Step 1: Extract archives ───────────────────────────────────────────────────
-message("==> Extracting Xenium archives if needed ...")
-
-
-# ── Step 2: Load each sample ──────────────────────────────────────────────────
+# ── Step 1: Load each Xenium sample ───────────────────────────────────────────
 message("==> Loading Xenium samples ...")
 
 load_xenium_sample <- function(row) {
   data_dir <- file.path(XEN_BASE, row$inner_dir)
-  message(sprintf("  Loading %s from %s ...", row$sample_id, data_dir))
+  message(sprintf("  Loading %s ...", row$sample_id))
 
   obj <- LoadXenium(data_dir, fov = "fov", segmentations = "cell")
 
-  # QC filter: keep cells with detectable transcripts
-  obj <- subset(obj, subset = nCount_Xenium > 5 & nFeature_Xenium > 3)
+  # QC filter matching published IRI pipeline
+  obj <- subset(obj, subset = nCount_Xenium > 10 & nFeature_Xenium > 3)
 
-  # Add sample metadata
   obj$sample_id <- row$sample_id
   obj$condition <- row$condition
   obj$side      <- row$side
+  obj$chip      <- row$chip
   obj$gsm       <- row$gsm
 
   log_mem(paste("after loading", row$sample_id))
@@ -115,156 +106,236 @@ load_xenium_sample <- function(row) {
 }
 
 sample_list <- vector("list", nrow(sample_meta))
-
-sample_meta[1,]
-
-
 for (i in seq_len(nrow(sample_meta))) {
   sample_list[[i]] <- load_xenium_sample(sample_meta[i, ])
 }
 names(sample_list) <- sample_meta$sample_id
 
-# ── Step 3: Merge all samples ─────────────────────────────────────────────────
-message("==> Merging all 12 samples ...")
+cell_counts <- sapply(sample_list, ncol)
+message("  Cell counts per sample:")
+print(cell_counts)
+message(sprintf("  Total cells: %d", sum(cell_counts)))
 
+# ── Step 2: Merge all 12 samples ──────────────────────────────────────────────
+message("==> Merging all 12 samples ...")
 object <- merge(
   x            = sample_list[[1]],
   y            = sample_list[-1],
   add.cell.ids = names(sample_list),
-  project      = "Xenium_UUO_Integration"
+  project      = "Xenium_UUO"
 )
 rm(sample_list); gc()
 log_mem("after merge")
 
-# ── Step 4: SCTransform ───────────────────────────────────────────────────────
-message("==> Running SCTransform ...")
-# Xenium panels are pre-selected informative genes; normalize all features.
 DefaultAssay(object) <- "Xenium"
-object <- SCTransform(object, assay = "Xenium", clip.range = c(-10, 10),
-                      verbose = TRUE)
-log_mem("after SCTransform")
 
-# ── Step 5: Geometric sketching ───────────────────────────────────────────────
-message("==> Sketching data (LeverageScore, 5 000 cells per sample) ...")
-object <- SketchData(
-  object         = object,
-  ncells         = 5000,
-  method         = "LeverageScore",
-  sketched.assay = "sketch"
+# ── Step 3: Normalize ─────────────────────────────────────────────────────────
+# Log-normalization with scale.factor=100, matching published IRI pipeline
+message("==> Normalizing ...")
+object <- NormalizeData(object,
+  normalization.method = "LogNormalize",
+  scale.factor         = 100
 )
-DefaultAssay(object) <- "sketch"
-log_mem("after sketching")
+object <- JoinLayers(object)
+log_mem("after normalization")
 
-# ── Step 6: PCA on sketched data ──────────────────────────────────────────────
-message("==> PCA on sketch ...")
-# Use all features: Xenium panel is already curated, no HVG sub-selection needed
-object <- ScaleData(object, assay = "sketch")
+# ── Step 4: PCA on all cells ──────────────────────────────────────────────────
+# Use all Xenium genes — panel is pre-curated, no HVG selection needed
+# No sketching — ~300 genes makes PCA fast even on millions of cells
+message("==> Scaling and running PCA ...")
+xenium_genes <- rownames(object)
+message(sprintf("  %d Xenium genes used for PCA", length(xenium_genes)))
+
+object <- ScaleData(object, features = xenium_genes)
 object <- RunPCA(object,
-  assay          = "sketch",
-  features       = rownames(object),
-  reduction.name = "pca.sketch",
+  features       = xenium_genes,
+  reduction.name = "pca",
   npcs           = 30,
   verbose        = FALSE
 )
+log_mem("after PCA")
 
-# ── Step 7: Harmony on sketch (batch = sample_id) ────────────────────────────
-message("==> Running Harmony on sketch ...")
+# ── Step 5: Harmony batch correction ──────────────────────────────────────────
+message("==> Running Harmony (batch = sample_id) ...")
 object <- RunHarmony(
   object         = object,
   group.by.vars  = "sample_id",
-  assay.use      = "sketch",
-  reduction      = "pca.sketch",
-  reduction.save = "harmony.sketch",
-  theta          = 2,
+  reduction      = "pca",
+  reduction.save = "harmony",
+  theta          = 1,
   max_iter       = 20,
   verbose        = TRUE
 )
 log_mem("after Harmony")
 
-# ── Step 8: Cluster + embed sketch ────────────────────────────────────────────
-message("==> Clustering sketched cells ...")
-object <- FindNeighbors(object,
-  reduction = "harmony.sketch",
-  dims      = 1:30,
-  assay     = "sketch"
-)
-object <- FindClusters(object,
-  resolution   = 0.3,
-  cluster.name = "seurat_cluster.harmony.sketched"
-)
+# ── Step 6: Cluster and UMAP on all cells ─────────────────────────────────────
+message("==> Clustering and UMAP ...")
+object <- FindNeighbors(object, reduction = "harmony", dims = 1:30)
+object <- FindClusters(object, resolution = 0.3, cluster.name = "seurat_clusters")
 object <- RunUMAP(object,
-  reduction      = "harmony.sketch",
+  reduction      = "harmony",
   dims           = 1:30,
-  reduction.name = "umap.harmony.sketch",
-  return.model   = TRUE
+  reduction.name = "umap"
 )
-log_mem("after sketch clustering")
+log_mem("after clustering")
+# save the object after clustering and UMAP, before label transfer
+saveRDS(object, file.path(OUT_DIR, "Xenium_harmony_integrated_prelabeltransfer.rds"))
+message("  Saved: ", file.path(OUT_DIR, "Xenium_harmony_integrated_prelabeltransfer.rds"))
 
-# ── Step 9: Project back to full dataset ──────────────────────────────────────
-message("==> Projecting to full dataset ...")
-object <- ProjectData(
-  object             = object,
-  assay              = "SCT",
-  full.reduction     = "full.pca.sketch",
-  sketched.assay     = "sketch",
-  sketched.reduction = "harmony.sketch",
-  umap.model         = "umap.harmony.sketch",
-  dims               = 1:30,
-  refdata            = list(
-    seurat_cluster.harmony.projected = "seurat_cluster.harmony.sketched"
+
+# helper: prepare a reference for label transfer
+# - subsets to shared genes with Xenium panel
+# - scales and runs PCA on the data layer
+prepare_reference <- function(ref_path, label) {
+  message(sprintf("==> Loading %s reference ...", label))
+  ref <- readRDS(ref_path)
+  DefaultAssay(ref) <- "originalexp"
+
+  # Reference rownames are Ensembl IDs (e.g. "ENSMUSG00000026315"); the
+  # actual gene symbol is embedded in meta.features$feature_name, as either
+  # "Symbol" or "Symbol_ENSMUSG..." (suffixed only for duplicated symbols).
+  # Swap rownames to symbols so they can be matched against the Xenium panel.
+  feat_name <- as.character(ref[["originalexp"]]@meta.features$feature_name)
+  symbol    <- sub("_ENSMUSG.*$", "", feat_name)
+  keep      <- !duplicated(symbol) & symbol != ""
+  ref       <- ref[keep, ]
+  symbol    <- symbol[keep]
+
+  a <- ref[["originalexp"]]
+  if (nrow(a@data) > 0)       rownames(a@data)       <- symbol
+  if (nrow(a@counts) > 0)     rownames(a@counts)      <- symbol
+  if (nrow(a@scale.data) > 0) rownames(a@scale.data)  <- symbol
+  rownames(a@meta.features) <- symbol
+  ref[["originalexp"]] <- a
+
+  shared <- intersect(xenium_genes, rownames(ref))
+  message(sprintf("  Shared genes with Xenium panel: %d / %d", length(shared), length(xenium_genes)))
+
+  ref <- ref[shared, ]
+  ref <- ScaleData(ref, features = shared, verbose = FALSE)
+  ref <- RunPCA(ref,
+    features       = shared,
+    reduction.name = "pca",
+    npcs           = 30,
+    verbose        = FALSE
   )
+  log_mem(paste("after", label, "reference PCA"))
+  list(ref = ref, shared = shared)
+}
+
+# ── Step 7: Label transfer from MKA reference ─────────────────────────────────
+mka      <- prepare_reference(REF_MKA, "MKA")
+ref_mka  <- mka$ref
+shared_mka <- mka$shared
+rm(mka)
+
+DefaultAssay(object) <- "Xenium"
+message("==> FindTransferAnchors (MKA) ...")
+anchors_mka <- FindTransferAnchors(
+  reference            = ref_mka,
+  query                = object,
+  normalization.method = "LogNormalize",
+  reference.reduction  = "pca",
+  features             = shared_mka,
+  dims                 = 1:30,
+  k.anchor             = 5
 )
-log_mem("after projection")
+message("==> MapQuery (MKA -> MKA_celltype) ...")
+object <- MapQuery(
+  anchorset           = anchors_mka,
+  query               = object,
+  reference           = ref_mka,
+  refdata             = list(MKA_celltype = "author_cell_type"),
+  reference.reduction = "pca"
+)
+rm(ref_mka, anchors_mka); gc()
+log_mem("after MKA label transfer")
 
-# ── Step 10: Visualize ────────────────────────────────────────────────────────
+# ── Step 8: Label transfer from Lake snRNA-seq reference ──────────────────────
+lake       <- prepare_reference(REF_LAKE, "Lake")
+ref_lake   <- lake$ref
+shared_lake <- lake$shared
+rm(lake)
+
+DefaultAssay(object) <- "Xenium"
+message("==> FindTransferAnchors (Lake) ...")
+anchors_lake <- FindTransferAnchors(
+  reference            = ref_lake,
+  query                = object,
+  normalization.method = "LogNormalize",
+  reference.reduction  = "pca",
+  features             = shared_lake,
+  dims                 = 1:30,
+  k.anchor             = 5
+)
+message("==> MapQuery (Lake -> Lake_SubclassLevel1 + Lake_SubclassLevel3) ...")
+object <- MapQuery(
+  anchorset           = anchors_lake,
+  query               = object,
+  reference           = ref_lake,
+  refdata             = list(
+    Lake_SubclassLevel1 = "SubclassLevel1",
+    Lake_SubclassLevel3 = "SubclassLevel3"
+  ),
+  reference.reduction = "pca"
+)
+rm(ref_lake, anchors_lake); gc()
+log_mem("after Lake label transfer")
+
+# ── Step 9: Visualize and save ────────────────────────────────────────────────
 message("==> Saving plots ...")
-Idents(object) <- "seurat_cluster.harmony.projected"
-
 pdf(OUT_PDF, width = 16, height = 7)
 
-# UMAP: cluster identity
 p_cluster <- DimPlot(object,
-  reduction = "umap.harmony.sketch",
-  group.by  = "seurat_cluster.harmony.projected",
-  label     = TRUE, repel = TRUE, pt.size = 0.1
-) + ggtitle("Xenium — Harmony clusters")
+  reduction = "umap", group.by = "seurat_clusters",
+  label = TRUE, repel = TRUE, pt.size = 0.1
+) + ggtitle("Harmony clusters")
 
-# UMAP: sample identity
+p_mka <- DimPlot(object,
+  reduction = "umap", group.by = "predicted.MKA_celltype",
+  label = TRUE, repel = TRUE, pt.size = 0.1
+) + ggtitle("MKA: author_cell_type")
+
+p_lake1 <- DimPlot(object,
+  reduction = "umap", group.by = "predicted.Lake_SubclassLevel1",
+  label = TRUE, repel = TRUE, pt.size = 0.1
+) + ggtitle("Lake: SubclassLevel1 (broad)")
+
+p_lake3 <- DimPlot(object,
+  reduction = "umap", group.by = "predicted.Lake_SubclassLevel3",
+  label = TRUE, repel = TRUE, pt.size = 0.1
+) + ggtitle("Lake: SubclassLevel3 (detailed)")
+
+print(p_cluster | p_mka)
+print(p_lake1 | p_lake3)
+
 p_sample <- DimPlot(object,
-  reduction = "umap.harmony.sketch",
-  group.by  = "sample_id",
-  label     = FALSE, pt.size = 0.1
+  reduction = "umap", group.by = "sample_id",
+  label = FALSE, pt.size = 0.1
 ) + ggtitle("Sample identity")
 
-print(p_cluster | p_sample)
-
-# UMAP: condition
 p_cond <- DimPlot(object,
-  reduction = "umap.harmony.sketch",
-  group.by  = "condition",
-  label     = FALSE, pt.size = 0.1
+  reduction = "umap", group.by = "condition",
+  label = FALSE, pt.size = 0.1
 ) + ggtitle("Condition (UUO time-point)")
 
-# UMAP: side (L = obstructed, R = contralateral)
 p_side <- DimPlot(object,
-  reduction = "umap.harmony.sketch",
-  group.by  = "side",
-  label     = FALSE, pt.size = 0.1
-) + ggtitle("Side (L = obstructed, R = contralateral)")
+  reduction = "umap", group.by = "side",
+  label = FALSE, pt.size = 0.1
+) + ggtitle("Side (L=obstructed, R=contralateral)")
 
-print(p_cond | p_side)
+print(p_sample | p_cond | p_side)
 
-# Spatial cluster plots for each sample
+# Spatial plots per sample
 for (i in seq_len(nrow(sample_meta))) {
-  samp <- sample_meta$sample_id[i]
-  cells_samp <- WhichCells(object, expression = sample_id == samp)
-  sub_obj <- subset(object, cells = cells_samp)
-  Idents(sub_obj) <- "seurat_cluster.harmony.projected"
+  samp    <- sample_meta$sample_id[i]
+  cells_s <- WhichCells(object, expression = sample_id == samp)
+  sub_obj <- subset(object, cells = cells_s)
   tryCatch({
     print(
-      ImageDimPlot(sub_obj, fov = "fov", cols = "polychrome",
-                   axes = TRUE, size = 0.3) +
-        ggtitle(paste("Spatial clusters:", samp))
+      ImageDimPlot(sub_obj, fov = "fov", group.by = "predicted.MKA_celltype",
+                   cols = "polychrome", axes = TRUE, size = 0.3) +
+        ggtitle(paste("Cell types:", samp))
     )
   }, error = function(e) {
     message("  ImageDimPlot failed for ", samp, ": ", e$message)
@@ -274,7 +345,6 @@ for (i in seq_len(nrow(sample_meta))) {
 dev.off()
 message("  Saved: ", OUT_PDF)
 
-# ── Step 11: Save ─────────────────────────────────────────────────────────────
 message("==> Saving RDS ...")
 saveRDS(object, OUT_RDS)
 message("  Saved: ", OUT_RDS)
