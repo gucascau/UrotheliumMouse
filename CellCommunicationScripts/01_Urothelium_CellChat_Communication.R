@@ -103,6 +103,7 @@ cellchat <- identifyOverExpressedInteractions(cellchat)
 cellchat <- computeCommunProb(cellchat, type = "triMean")
 saveRDS(cellchat, file = paste0(Outdir, "CellChat_Urothelium_AllCellTypes_raw.rds"))
 
+
 cellchat <- filterCommunication(cellchat, min.cells = 3)
 cellchat <- computeCommunProbPathway(cellchat)
 cellchat <- aggregateNet(cellchat)
@@ -110,6 +111,7 @@ cellchat <- netAnalysis_computeCentrality(cellchat, slot.name = "netP")
 
 saveRDS(cellchat, file = paste0(Outdir, "CellChat_Urothelium_AllCellTypes_final.rds"))
 
+cellchat<- readRDS(paste0(Outdir, "CellChat_Urothelium_AllCellTypes_final.rds"))
 df.net <- subsetCommunication(cellchat)
 write.csv(df.net, file = paste0(Outdir, "CellChat_AllCellTypes_LR_interactions.csv"), row.names = FALSE)
 
@@ -221,6 +223,9 @@ ggsave(paste0(UroDir, "Urothelium_AsReceiver_StrengthBySource_Barplot.pdf"), plo
 
 # 6f. Ligand / receptor gene expression DotPlots
 UroObj   <- subset(SingleCellObj, idents = UroLabel)
+
+# we only selected the endothelium cells, fibroblasts, macrophages, T cells, PC cells as the target cell types for the DotPlots
+OtherCellTypes <- c("PC", "Endo", "Fib", "Macro", "T lymph", "B lymph" )
 OtherObj <- subset(SingleCellObj, idents = OtherCellTypes)
 Idents(OtherObj) <- factor(Idents(OtherObj), levels = OtherCellTypes)
 
@@ -228,15 +233,25 @@ Idents(OtherObj) <- factor(Idents(OtherObj), levels = OtherCellTypes)
 SenderLigands   <- unique(UroAsSender$ligand)
 SenderReceptors <- unique(UroAsSender$receptor)
 
-UroLigandDotPlot <- DotPlot(UroObj, features = rev(SenderLigands), cols = c("lightgrey", "blue")) +
-  coord_flip() + theme_classic() +
+# Here we only selected the Ligand genes highly expressed in Urothelium:
+SenderLigands <- c("Spp1","Col4a3","Col4a4","Col4a5","App")
+SenderReceptors <- c("Cd44","Itgav","Itgb1","Itgb3","Itgb4","Itgb5","Itgb6","Itgb8","Itgb9","Sdc4","Adgrg6","Cd74","Tnfrsf21")
+
+UroLigandDotPlot <- DotPlot(UroObj, features = rev(SenderLigands), cols = c("lightgrey", "blue")) + 
+  coord_flip() + theme_classic() +  scale_size(range = c(0, 6), limits = c(0, 60), breaks = c(0, 20, 40, 60))+ guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  )+
   theme(axis.text.x = element_text(angle = 60, hjust = 1, size = 8), axis.title = element_blank())
 OtherReceptorDotPlot <- DotPlot(OtherObj, features = rev(SenderReceptors), cols = c("lightgrey", "red")) +
-  coord_flip() + theme_classic() +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1, size = 8), axis.title = element_blank())
+  coord_flip() + theme_classic() + guides(
+    color = guide_colorbar(title = "AveExp"),
+    size  = guide_legend(title = "PerExp")
+  ) + theme(axis.text.x = element_text(angle = 60, hjust = 1, size = 8), axis.title = element_blank())
 
-ggsave(paste0(UroDir, "Urothelium_AsSender_Ligand_DotPlot.pdf"), plot = UroLigandDotPlot, height = max(4, length(SenderLigands) / 4), width = 5)
-ggsave(paste0(UroDir, "Urothelium_AsSender_TargetReceptor_DotPlot.pdf"), plot = OtherReceptorDotPlot, height = max(4, length(SenderReceptors) / 4), width = 10)
+# ggsave(paste0(UroDir, "Urothelium_AsSender_SelectedLigand_DotPlot.pdf"), plot = UroLigandDotPlot, height = max(4, length(SenderLigands) / 4), width = 5)
+ggsave(paste0(UroDir, "Urothelium_AsSender_SelectedLigand_DotPlot.pdf"), plot = UroLigandDotPlot, height = max(4, length(SenderLigands) / 4), width = 2.5)
+ggsave(paste0(UroDir, "Urothelium_AsSender_SelectedReceptor_DotPlot.pdf"), plot = OtherReceptorDotPlot, height = max(4, length(SenderReceptors) / 4), width = 4)
 
 ## Urothelium as receiver: ligand genes in other cell types, receptor genes in Urothelium
 ReceiverLigands   <- unique(UroAsReceiver$ligand)

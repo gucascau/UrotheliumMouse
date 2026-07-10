@@ -119,19 +119,25 @@ rm(all_counts, rctd_ref); gc()
 
 # Checkpoint before the combine step so RCTD results survive any downstream
 # failure without needing to rerun the (many-hour) per-image RCTD loop.
-saveRDS(all_rctd_meta, file.path(OUT_DIR, "all_rctd_meta_bothkidneys.rds"))
+saveRDS(all_rctd_meta, file.path(OUT_DIR, "all_rctd_meta_bothkidneysHD.rds"))
 
 # ── Combine weights from both kidneys and add to Seurat object ────────────────
 message("\n==> Adding RCTD weights to Seurat object ...")
-# unname() prevents rbind.data.frame from prepending the list names (image
-# IDs) onto each row name, which would double-prefix cell names (e.g.
-# "slice1.008um.kidney3p_..." instead of "kidney3p_...") and make every row
-# fail to match colnames(object) in AddMetaData below.
 combined_meta <- do.call(rbind, unname(all_rctd_meta))
 rm(all_rctd_meta); gc()
 
-# AddMetaData matches on rownames; cells not in combined_meta receive NA
-object <- AddMetaData(object, combined_meta)
+message(sprintf("  combined_meta: %d rows,  object cells: %d",
+                nrow(combined_meta), ncol(object)))
+n_missing <- sum(!colnames(object) %in% rownames(combined_meta))
+if (n_missing > 0)
+  message(sprintf("  %d bins absent from RCTD results (low-UMI, filtered) — set to NA",
+                  n_missing))
+
+# Index by cell barcode so bins absent from RCTD (filtered out by "full" mode)
+# receive NA rather than causing AddMetaData to abort with a size mismatch.
+for (col in colnames(combined_meta)) {
+  object@meta.data[[col]] <- combined_meta[rownames(object@meta.data), col]
+}
 rm(combined_meta); gc()
 log_mem("after adding metadata")
 

@@ -37,6 +37,7 @@ dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 OBJECT_RDS <- file.path(OUT_DIR, "Xenium_harmony_integrated_prelabeltransfer.rds")
 REF_RDS    <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/RenalUrotheliumScripts/output/RenalUrothelium_allcells_scvi_annotations_meta_uro_updated.rds"
 OUT_DECONV <- file.path(OUT_DIR, "Xenium_RCTD_deconvolved.rds")
+OUT_DECONV_UPdated <- file.path(OUT_DIR, "Xenium_RCTD_updated_deconvolved.rds")
 OUT_PDF    <- file.path(OUT_DIR, "Xenium_RCTD_dominant_celltype.pdf")
 
 # Sample IDs (must match sample_id metadata column in object)
@@ -208,3 +209,37 @@ message("  Saved: ", OUT_PDF)
 
 message("==> Done.")
 log_mem("final")
+
+
+# Due to 300 genes in the Xenium Panel, we cannot fully capture the cell types for all these cells, therefore we count on the biomarker to manually annoate these cells
+
+object<- readRDS(OUT_DECONV)
+
+
+# the previous clusters are not well categorized into different cell types, I further increased the resolution. 
+object <- FindClusters(object, resolution = 1, cluster.name = "seurat_clusters")
+object <- RunUMAP(object,
+  reduction      = "harmony",
+  dims           = 1:30,
+  reduction.name = "umap"
+)
+
+# save the reclustered object
+
+markers <- FindAllMarkers(
+  seurat_obj,
+  only.pos = TRUE,      # only upregulated markers, not both directions
+  min.pct = 0.25,        # gene must be detected in ≥25% of cells in at least one group
+  logfc.threshold = 0.25 # minimum log2FC to bother testing
+)
+
+library(dplyr)
+top_markers <- markers %>%
+  group_by(cluster) %>%
+  slice_max(avg_log2FC, n = 5)
+
+
+# manually annotated the clusters:
+
+
+  saveRDS(OUT_DECONV_UPdated)

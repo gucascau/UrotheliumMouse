@@ -17,6 +17,6 @@ mkdir -p "${SCRIPT_DIR}/output"
 module purge
 module load GCC/9.3.0 OpenMPI/4.0.3 R/4.4.0
 
-Rscript "${SCRIPT_DIR}/03_Xenium_Deconvolution.R"
+Rscript "${SCRIPT_DIR}/03_Xenium_Updated_Deconvolution.R"
 
 echo "Job finished: $(date)"
