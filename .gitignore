@@ -22,10 +22,18 @@ logs/
 # ── Data file types ───────────────────────────────────────────────────────────
 *.h5ad
 *.rds
+*.Rds
+*.rds.bak
+*.Rds.bak
 *.gz
 *.mtx
 *.loom
 *.pt
+*.bak
+*.png
+
+# ── SCENIC intermediate/output (regenerable, large) ───────────────────────────
+SCENIC_run/
 
 # ── Tabular data (symlinked GEO files, large count matrices) ─────────────────
 *.csv

@@ -34,12 +34,12 @@
 library(Seurat)
 library(ggplot2)
 library(dplyr)
-
+library(tidyr)
 # ── Paths ─────────────────────────────────────────────────────────────────────
 HD_BASE <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSpatialData/VisiumHD"
 OUT_DIR <- "/vast0/home/gdjacksonlab/lab/xxw004/UUO/Datasets/Mouse/UsedSingleCells/SpatialScripts/output"
 
-OBJECT_RDS <- file.path(OUT_DIR, "VisiumHD_harmony_KidneyOnlyintegrated.rds")
+OBJECT_RDS <- file.path(OUT_DIR, "VisiumHD_kidney_both_deconvolved.rds")
 
 # Urothelial marker panel used throughout this project (see UrothelialMarkers
 # in 01_VisiumHD_integrate_harmony_sketch.R line ~669)
@@ -91,6 +91,89 @@ object <- readRDS(OBJECT_RDS)
 DefaultAssay(object) <- "Spatial.008um"
 all_images <- Images(object)
 message("Image slots found: ", paste(all_images, collapse = ", "))
+# before doing anything I want to change the
+
+
+# Generate the cell type within nich 9
+object @meta.data %>% filter (seurat_cluster.harmony.projected == "9") %>% head()
+# we extract the RCTD columns
+rctd_cols<- grep("^rctd_", colnames(object@meta.data), value = T)[1:36]
+object @meta.data %>% select(all_of(rctd_cols)) 
+
+# I want to combine the rctd_Asc-Vasa-Recta, rctd_Desc-Vasa-Recta, rctd_Vas-Efferens, rctd_Vas-Afferens to rctd_endo, change the name of rctd_Per -> rctd_Peri/VSMC
+# ── Collapse related RCTD cell types for interpretability ─────────────────────
+VASCULAR_SUBTYPES <- c("rctd_Asc-Vasa-Recta", "rctd_Desc-Vasa-Recta",
+                        "rctd_Vas-Efferens", "rctd_Vas-Afferens")
+
+collapse_rctd_celltypes <- function(df) {
+  vascular_present <- intersect(VASCULAR_SUBTYPES, colnames(df))
+  if (length(vascular_present) > 0) {
+    # No na.rm: a bin's rctd_* weights are either all NA (RCTD-excluded bin)
+    # or all numeric together, so plain rowSums preserves that NA-ness
+    # instead of silently turning excluded bins into a fabricated 0.
+    df$rctd_Endo <- rowSums(df[, c("rctd_Endo", vascular_present), drop = FALSE])
+    df <- df[, !(colnames(df) %in% vascular_present)]
+  }
+  if ("rctd_Per" %in% colnames(df)) {
+    colnames(df)[colnames(df) == "rctd_Per"] <- "rctd_Peri/VSMC"
+  }
+  df
+}
+meta <- object@meta.data
+meta <- collapse_rctd_celltypes(meta)
+
+rctd_cols <- grep("^rctd_", colnames(meta), value = TRUE)
+rctd_cols <- setdiff(rctd_cols, "rctd_dominant_celltype")
+
+# Then I added this into the object
+object@meta.data %>% head()
+meta %>% head()
+# Normalize weights so each spot's cell-type proportions sum to 1
+
+# Subset to the cluster of interest
+cluster_id <- "9"  # change to your cluster of interest
+ # cluster_weights <- # Subset metadata to cells in the cluster of interest
+composition_df <- meta %>%
+  filter(seurat_cluster.harmony.projected == cluster_id) %>%
+  select(sample_id, all_of(rctd_cols)) %>%
+  group_by(sample_id) %>%
+  summarise(across(all_of(rctd_cols), \(x) mean(x, na.rm = TRUE))) %>%
+  pivot_longer(cols = all_of(rctd_cols), names_to = "cell_type", values_to = "proportion") %>%
+  mutate(cell_type = sub("^rctd_", "", cell_type))
+## Optional: collapse rare types into "Other" per sample
+composition_df <- composition_df %>%
+  mutate(cell_type = ifelse(proportion < 0.01, "Other", cell_type)) %>%
+  group_by(sample_id, cell_type) %>%
+  summarise(proportion = sum(proportion), .groups = "drop")
+
+# 
+ggplot(composition_df, aes(x = sample_id, y = proportion, fill = cell_type)) +
+  geom_col(position = "stack") +
+  labs(title = paste("Cell type composition by sample — Cluster", cluster_id),
+       x = NULL, y = "Mean proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Or as a pie chart
+Nich9CelltypePieCharDonot<- ggplot(composition_df, aes(x = 2, y = proportion, fill = cell_type)) +
+  geom_col(width = 1) +
+  coord_polar(theta = "y") +
+  xlim(0.5, 2.5) +  # creates the donut hole
+  facet_wrap(~ sample_id) +
+  theme_void() 
+  #+
+  # labs(title = paste("Cluster", cluster_id, "— Cell type composition by sample"))
+
+# save this pie chart for the nich9
+ggsave(file.path(OUT_DIR, "XeniumHD_Nich9CelltypePieCharDonot.pdf"), plot= Nich9CelltypePieCharDonot, height =4, width =7)
+
+ggplot(composition_df, aes(x = "", y = proportion, fill = cell_type)) +
+  geom_col(width = 1) +
+  coord_polar(theta = "y") +
+  facet_wrap(~ sample_id) +
+  theme_void() +
+  labs(title = paste("Cluster", cluster_id, "— Cell type composition by sample")) +
+  theme(strip.text = element_text(size = 11, face = "bold"))
 
 markers_present <- intersect(Requested_MARKERS, rownames(object))
 
@@ -122,9 +205,9 @@ subset_region <- function(barcodes, prefix, image_name, region_name) {
   region_obj <- subset(object, cells = matched)
   region_obj <- JoinLayers(region_obj)
 
-  #out_rds <- file.path(OUT_DIR, sprintf("VisiumHD_region_%s_%s.rds", region_name, RequestedCategoriesName))
-  #saveRDS(region_obj, out_rds)
-  #message("  Saved: ", out_rds)
+  out_rds <- file.path(OUT_DIR, sprintf("VisiumHD_region_%s_%s.rds", region_name, RequestedCategoriesName))
+  saveRDS(region_obj, out_rds)
+  message("  Saved: ", out_rds)
 
   out_pdf <- file.path(OUT_DIR, sprintf("VisiumHD_region_%s_%s.pdf", region_name, RequestedCategoriesName))
   pdf(out_pdf, width = 3.5, height = 4)
