@@ -32,8 +32,9 @@
 # reason 02 rebuilt it: the atlas-level PCA is dominated by whole-kidney
 # cell-type differences, not substructure within 715 Uro cells.
 #
-# Cluster labels for Slingshot's start.clus: FindClusters(graph.name="wnn")
-# produces NEW cluster IDs (not the RNA-only seurat_clusters from 02), so
+# Cluster labels for Slingshot's start.clus: FindClusters(graph.name="wsnn")
+# (FindMultiModalNeighbors' default SNN graph name -- not "wnn") produces
+# NEW cluster IDs (not the RNA-only seurat_clusters from 02), so
 # the E16.5-enriched root cluster is picked programmatically here (by %E16.5
 # composition) rather than hardcoding an ID the way 03 hardcodes start.clus
 # = "4" from a one-time visual inspection of Figure 4.
@@ -110,7 +111,7 @@ uro <- RunUMAP(uro, nn.name = "weighted.nn", reduction.name = "wnn.umap",
 # Separate higher-dim embedding purely for Slingshot fitting (see header).
 uro <- RunUMAP(uro, nn.name = "weighted.nn", reduction.name = "wnn.umap.fit",
                reduction.key = "wnnUMAPfit_", n.components = 10)
-uro <- FindClusters(uro, graph.name = "wnn", resolution = 0.5, verbose = FALSE)
+uro <- FindClusters(uro, graph.name = "wsnn", resolution = 0.5, verbose = FALSE)
 uro$wnn_clusters <- uro$seurat_clusters
 
 message("  WNN cluster x stage crosstab:")

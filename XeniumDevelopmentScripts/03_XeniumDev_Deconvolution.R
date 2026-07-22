@@ -25,6 +25,16 @@
 # Chen2025's "B/Plasma" label) -- sanitized defensively even though
 # final_annotation_with_uro doesn't currently contain one.
 #
+# rctd_dominant_celltype requires the winning RCTD weight to be a true
+# MAJORITY (>0.5 of that cell's total weight), not just a plurality --
+# max.col() alone would call a cell type "dominant" even at, say, 30%
+# weight if nothing else scored higher. Confirmed interactively this
+# matters in practice for Urothelium specifically (median winning weight
+# was 0.59, 36.5% below 0.5, dominant contaminant Asc-Vasa-Recta present in
+# 37% of "Urothelium" calls -- a real adjacent-anatomy confound, not noise).
+# Cells that don't clear the bar get rctd_dominant_celltype = NA rather
+# than an unreliable label.
+#
 # Input:  XeniumDevelopmentScripts/output/XeniumDev_harmony_integrated_prelabeltransfer.rds
 #         RenalUrotheliumScripts/output/RenalUrothelium_allcells_scvi_annotations_meta_uro_updated.rds
 # Output: XeniumDev_RCTD_deconvolved.rds
@@ -122,9 +132,22 @@ for (i in seq_along(all_fovs)) {
   colnames(weights) <- paste0("rctd_", colnames(weights))
 
   meta_i <- as.data.frame(weights)
-  meta_i$rctd_dominant_celltype <- sub(
-    "^rctd_", "",
-    colnames(weights)[max.col(weights, ties.method = "first")]
+  # normalize_weights() makes each cell's weights sum to 1 across at most 2
+  # cell types (doublet mode), so max.col() alone only guarantees a
+  # PLURALITY winner, not a majority -- confirmed interactively on the
+  # Urothelium call specifically that this matters: median winning weight
+  # was only 0.59, and 36.5% of "Urothelium" cells were below 0.5, with the
+  # dominant contaminant (Asc-Vasa-Recta, a real adjacent-anatomy confound)
+  # present in 37% of them. Requiring MIN_DOMINANT_WEIGHT here applies that
+  # same majority-not-plurality bar to all 36 cell types, not just
+  # Urothelium -- cells whose top RCTD weight doesn't clear it get NA
+  # rather than a low-confidence label.
+  MIN_DOMINANT_WEIGHT <- 0.5
+  top_weight <- apply(weights, 1, max)
+  meta_i$rctd_dominant_celltype <- ifelse(
+    top_weight > MIN_DOMINANT_WEIGHT,
+    sub("^rctd_", "", colnames(weights)[max.col(weights, ties.method = "first")]),
+    NA_character_
   )
 
   all_rctd_meta[[samp]] <- meta_i

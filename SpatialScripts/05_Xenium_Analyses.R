@@ -667,7 +667,7 @@ HealthyUrotheliumObject <- subset(HealthyObject, FinalCellType == "Uro")
 
 Idents(HealthyUrotheliumObject)<- "sample_id"
 # check the expression of 
-markers_in_uro <- c( "Upk1b", "Krt5", "Krt14","Krt15" ,"Krt19","Krt20","Cd24a","Spp1", "Havcr1",  "Vcam1", "Cd74","Fosl1" )
+markers_in_uro <- c(Upk1a","Upk1b","Upk2","Upk3a","Upk3b","Krt5","Krt7","Krt8","Krt18","Krt19","Krt13","Krt16","Krt79","Trp63")
 DotPlot(HealthyUrotheliumObject, features = markers_in_uro)
 
 p <- DotPlot(

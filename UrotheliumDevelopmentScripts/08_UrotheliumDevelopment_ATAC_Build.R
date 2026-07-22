@@ -100,13 +100,20 @@ uro_frag <- CreateFragmentObject(path = FRAGMENTS_PATH, cells = colnames(uro))
 
 # CreateChromatinAssay requires *some* counts matrix with valid
 # "chr-start-end" rownames to build its internal ranges -- this placeholder
-# single-region matrix exists only so CallPeaks(group.by="Age") below has an
-# assay to find the attached Fragment object via Fragments(object[[assay]]);
-# it gets replaced wholesale by the real peak x cell matrix right after.
-placeholder_region <- "chr1-3000000-3000001"
+# matrix exists only so CallPeaks(group.by="Age") below has an assay to find
+# the attached Fragment object via Fragments(object[[assay]]); it gets
+# replaced wholesale by the real peak x cell matrix right after.
+# >= 2 placeholder regions required, not 1: CreateChromatinAssay's internal
+# min.features filter does data.use[, ncount.cell >= min.features] on the
+# counts matrix, and a 1-row matrix silently drops to a bare vector on that
+# column subset (R/Matrix default drop=TRUE), so the subsequent
+# ncol(data.use) == 0 check sees NULL and errors with "argument is of length
+# zero" -- caught interactively via a chr19-only smoke test before this ever
+# reached a submitted job.
+placeholder_regions <- c("chr1-3000000-3000001", "chr1-4000000-4000001")
 atac_placeholder <- CreateChromatinAssay(
-  counts   = Matrix::Matrix(0, nrow = 1, ncol = ncol(uro),
-                             dimnames = list(placeholder_region, colnames(uro)), sparse = TRUE),
+  counts   = Matrix::Matrix(0, nrow = 2, ncol = ncol(uro),
+                             dimnames = list(placeholder_regions, colnames(uro)), sparse = TRUE),
   fragments = list(uro_frag),
   min.cells = 0, min.features = 0
 )
@@ -115,6 +122,8 @@ DefaultAssay(uro) <- "ATAC"
 
 # ── Call peaks: cell-aware path only, per-stage then merged ────────────────
 message("\n==> Calling peaks (MACS3, group.by = Age, mouse effective genome size) ...")
+macs3_outdir <- file.path(OUT_DIR, "macs3_tmp")
+dir.create(macs3_outdir, showWarnings = FALSE, recursive = TRUE)  # CallPeaks does not create outdir itself
 peaks <- CallPeaks(
   object                 = uro,
   assay                  = "ATAC",
@@ -122,11 +131,22 @@ peaks <- CallPeaks(
   macs2.path             = macs3_bin,
   effective.genome.size  = 1.87e9,   # "mm" -- MACS's default (2.7e9) is human
   combine.peaks           = TRUE,
-  outdir                 = file.path(OUT_DIR, "macs3_tmp"),
+  outdir                 = macs3_outdir,
   cleanup                = TRUE
 )
 peaks <- keepStandardChromosomes(peaks, pruning.mode = "coarse")
 peaks <- subset(peaks, seqnames %in% paste0("chr", c(1:19, "X", "Y")))
+
+# MACS3 has no notion of chromosome length, so a peak's summit +/- extsize
+# can run past the true end of a chromosome -- e.g. a chr8 peak here did.
+# peaks carries no seqlengths at all at this point (CallPeaks() doesn't set
+# any), so RegionStats()/BSgenome's Rsamtools-backed sequence loader has
+# nothing to clip against and errors with "trying to load regions beyond the
+# boundaries of non-circular sequence" the first time it hits one. Pull the
+# real seqlengths from the genome package being used everywhere else in this
+# script and trim() to them before anything downstream reads sequence.
+seqlengths(peaks) <- seqlengths(BSgenome.Mmusculus.UCSC.mm10)[seqlevels(peaks)]
+peaks <- trim(peaks)
 
 message(sprintf("  %d merged peaks across %d stage(s)", length(peaks), length(STAGE_ORDER)))
 if ("peak_called_in" %in% colnames(mcols(peaks))) {

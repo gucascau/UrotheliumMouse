@@ -31,6 +31,8 @@ logs/
 *.pt
 *.bak
 *.png
+*.bed
+*.bw
 
 # ── SCENIC intermediate/output (regenerable, large) ───────────────────────────
 SCENIC_run/

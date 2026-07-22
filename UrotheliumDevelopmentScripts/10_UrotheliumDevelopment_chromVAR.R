@@ -48,6 +48,7 @@ suppressPackageStartupMessages({
   library(TFBSTools)
   library(JASPAR2020)
   library(BSgenome.Mmusculus.UCSC.mm10)
+  library(SummarizedExperiment)
   library(pheatmap)
   library(RColorBrewer)
   library(dplyr)
@@ -93,8 +94,49 @@ TF_PANEL_MATCHED <- TF_PANEL[tf_hit]
 message("\n==> Scanning peaks for motif matches (AddMotifs) ...")
 uro <- AddMotifs(uro, genome = BSgenome.Mmusculus.UCSC.mm10, pfm = pfm, assay = "ATAC")
 
-message("\n==> Running chromVAR (RunChromVAR) ...")
-uro <- RunChromVAR(uro, genome = BSgenome.Mmusculus.UCSC.mm10, assay = "ATAC")
+message("\n==> Running chromVAR ...")
+# Signac dropped its RunChromVAR() convenience wrapper somewhere before
+# 1.17.1 (confirmed interactively: not in getNamespaceExports("Signac"),
+# and no chromVAR-related exports of any kind remain) -- reimplemented here
+# by calling the same chromVAR functions RunChromVAR used to call
+# internally (addGCBias -> getBackgroundPeaks -> computeDeviations ->
+# deviationScores), confirmed present in this chromVAR install via
+# getNamespaceExports("chromVAR").
+peak_counts  <- GetAssayData(uro, assay = "ATAC", layer = "counts")
+peak_ranges  <- granges(uro[["ATAC"]])
+motif_matrix <- GetMotifData(uro, assay = "ATAC", slot = "data")
+
+chromvar_se <- SummarizedExperiment(assays = list(counts = peak_counts), rowRanges = peak_ranges)
+chromvar_se <- addGCBias(chromvar_se, genome = BSgenome.Mmusculus.UCSC.mm10)
+
+# chromVAR's own filterPeaks() (not a manual ad hoc filter) drops peaks
+# below min_fragments_per_peak and, with non_overlapping=TRUE, overlapping
+# peaks -- both hard requirements of its background-peak sampler
+# (getBackgroundPeaks() otherwise rejects the whole matrix with "All peaks
+# must have at least one fragment in one sample"). ix_return=TRUE so
+# motif_matrix can be subset to match.
+keep_idx <- filterPeaks(chromvar_se, non_overlapping = TRUE, ix_return = TRUE)
+message(sprintf("  chromVAR filterPeaks: keeping %d / %d peaks", length(keep_idx), nrow(chromvar_se)))
+chromvar_se  <- chromvar_se[keep_idx, ]
+motif_matrix <- motif_matrix[keep_idx, ]
+
+# filterPeaks() doesn't catch everything, though: getBackgroundPeaks() still
+# failed post-filter with "'from' must be a finite number" inside its
+# GC/count binning step -- traced to non-finite rowData(chromvar_se)$bias
+# (NaN/Inf), which addGCBias() produces for peaks whose sequence is entirely
+# or mostly N-masked (letterFrequency's GC/(A+C+G+T) is 0/0 there), most
+# likely peaks sitting on assembly-gap regions of mm10. Not something
+# filterPeaks() checks for, so filtered here explicitly.
+bias_finite <- is.finite(SummarizedExperiment::rowData(chromvar_se)$bias)
+message(sprintf("  Dropping %d / %d peaks with non-finite GC bias (likely N-masked regions)",
+                sum(!bias_finite), length(bias_finite)))
+chromvar_se  <- chromvar_se[bias_finite, ]
+motif_matrix <- motif_matrix[bias_finite, ]
+
+bg_peaks <- getBackgroundPeaks(chromvar_se)
+dev      <- computeDeviations(object = chromvar_se, annotations = motif_matrix, background_peaks = bg_peaks)
+
+uro[["chromvar"]] <- CreateAssayObject(data = deviationScores(dev))
 DefaultAssay(uro) <- "chromvar"
 
 message(sprintf("  chromVAR assay: %d motifs x %d cells", nrow(uro[["chromvar"]]), ncol(uro[["chromvar"]])))

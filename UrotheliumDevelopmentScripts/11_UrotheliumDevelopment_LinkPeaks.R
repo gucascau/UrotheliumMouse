@@ -73,10 +73,29 @@ if (length(missing_genes) > 0) {
 # LinkPeaks
 ################################################################################
 message("\n==> Running LinkPeaks (genes.use = ", length(GENE_PANEL), " genes) ...")
+# LinkPeaks matches genes.use directly against rownames(GetAssayData(object,
+# assay = expression.assay)) (confirmed by reading Signac::LinkPeaks's
+# source: genes.keep <- intersect(names(genecounts[genecounts > min.cells]),
+# genes.use), evaluated BEFORE gene.coords is ever consulted) -- not against
+# gene.coords$gene_name, and not against expression.assay's meta.features.
+# originalexp's rownames are Ensembl IDs (the same recurring gotcha as
+# CellCommunicationScripts/02's Spp1/Col4a3-5 DotPlot), so GENE_PANEL
+# (symbols) matched zero rows there, expression.data ended up 0 x 0, and
+# gene.coords.use was consequently always empty too -- "Could not find gene
+# coordinates" was a downstream symptom of this, not a gene.coords problem.
+# rownames() can't be reassigned on the object directly ("Renaming features
+# in v3/v4 assays is not supported", same wall hit in that DotPlot fix) --
+# built a small symbol-keyed Assay instead, restricted to GENE_PANEL to keep
+# it cheap.
+gene_ensembl_ids <- setNames(rownames(fm_rna)[match(GENE_PANEL, fm_rna$gene_symbols)], GENE_PANEL)
+rna_panel_data <- GetAssayData(uro, assay = "originalexp", layer = "data")[gene_ensembl_ids, ]
+rownames(rna_panel_data) <- names(gene_ensembl_ids)
+uro[["rna_symbols"]] <- CreateAssayObject(data = rna_panel_data)
+
 uro <- LinkPeaks(
   object            = uro,
   peak.assay        = "ATAC",
-  expression.assay  = "originalexp",
+  expression.assay  = "rna_symbols",
   genes.use         = GENE_PANEL
 )
 
@@ -123,7 +142,7 @@ if (nrow(spp1_links) > 0) {
 }
 
 cov_args <- list(object = uro, region = "Spp1", features = "Spp1", assay = "ATAC",
-                  expression.assay = "originalexp", group.by = "Age", links = TRUE,
+                  expression.assay = "rna_symbols", group.by = "Age", links = TRUE,
                   extend.upstream = 5000, extend.downstream = 5000)
 if (!is.null(region_highlight)) cov_args$region.highlight <- region_highlight
 figD <- do.call(CoveragePlot, cov_args) &

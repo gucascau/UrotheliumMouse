@@ -58,6 +58,9 @@
 #         output/UroDev_Spp1/Spp1_Uro_AsReceiver_Bubble_<stage>.pdf
 #         output/UroDev_Spp1/Fig_Spp1_UroDev_SenderTrend_Heatmap.pdf
 #         output/UroDev_Spp1/Fig_Spp1_UroDev_ReceiverTrend_Heatmap.pdf
+#         output/UroDev_Spp1/DotPlot_Uro_Spp1_Col4a345_ByStage.pdf
+#         output/UroDev_Spp1/VlnPlot_Uro_Spp1_Col4a345_ByStage.pdf
+#         output/UroDev_Spp1/DotPlot_Receptors_OtherCellTypes_ByAge.pdf
 ################################################################################
 
 suppressMessages({
@@ -105,6 +108,145 @@ fm <- obj[["originalexp"]]@meta.features
 stopifnot(!any(is.na(fm$gene_symbols)), !any(duplicated(fm$gene_symbols)))
 
 CellChatDB <- CellChatDB.mouse
+
+################################################################################
+# Uro-only expression: Spp1 (ligand) vs Col4a3/Col4a4/Col4a5 (BM collagen IV
+# chains), by stage
+#
+# Purely descriptive -- no CellChat network math, no per-stage cell-type
+# filtering -- restricted to Uro cells across all 6 stages at once. Spp1 is
+# the ligand this whole script tracks via CellChat; Col4a3/Col4a4/Col4a5
+# form the alpha3-4-5 collagen IV heterotrimer that is the basement-membrane
+# scaffold Spp1/integrin signaling acts within. Plotting both in Uro cells
+# specifically distinguishes two different questions the CellChat bubble
+# plots above can't: is Uro itself ramping up Spp1 ligand production over
+# development (ligand induction), vs. does Uro also express the BM collagen
+# genes that would indicate it's building/maintaining that niche locally
+# rather than just receiving it from stroma (receptor/niche availability).
+################################################################################
+message("\n==> Uro-only Spp1/Col4a3/Col4a4/Col4a5 expression across stages ...")
+
+URO_GENES <- c("Spp1", "Col4a3", "Col4a4", "Col4a5", "App")
+uro_gene_ids <- setNames(rownames(fm)[match(URO_GENES, fm$gene_symbols)], URO_GENES)
+missing_uro_genes <- URO_GENES[is.na(uro_gene_ids)]
+
+uro_obj <- subset(obj, subset = celltype_final == UroLabel)
+# uro_obj <- subset(uro_obj, features = uro_gene_ids)
+message(sprintf("  %d Uro cells across stages: %s", ncol(uro_obj),
+                paste(table(uro_obj$Age), collapse = ", ")))
+
+# rownames(uro_obj) is intentionally left as Ensembl IDs -- Seurat silently
+# no-ops renaming features on this object's assay ("Renaming features in
+# v3/v4 assays is not supported", confirmed interactively), so relabeling to
+# gene symbols happens on the plot axes below instead of on the object.
+symbol_by_id <- setNames(names(uro_gene_ids), uro_gene_ids)
+
+
+DotPlot_Uro_Spp1Col4 <- DotPlot(
+    uro_obj,
+    features  = rev(unname(uro_gene_ids)),
+    group.by  = "Age",
+    cols      = c("lightgrey", "red"),
+    dot.scale = 8
+  ) +
+    scale_x_discrete(labels = symbol_by_id[unname(uro_gene_ids)]) +  RotatedAxis()  + coord_flip()+ 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "left") +
+    guides(color = guide_colorbar(title = "AveExp"), size = guide_legend(title = "PerExp"))
+
+  ggsave(file.path(OUT_DIR, "DotPlot_Uro_Spp1_Col4a345_ByStage.pdf"),
+         DotPlot_Uro_Spp1Col4, width = 4, height = 4.5)
+  message("  Saved: DotPlot_Uro_Spp1_Col4a345_ByStage.pdf")
+
+  vln_plots <- lapply(unname(uro_gene_ids), function(gid) {
+    VlnPlot(uro_obj, features = gid, group.by = "Age", cols = STAGE_COLORS, pt.size = 0) +
+      ggtitle(symbol_by_id[[gid]]) +
+      theme(legend.position = "none", axis.title.x = element_blank())
+  })
+  VlnPlot_Uro_Spp1Col4 <- patchwork::wrap_plots(vln_plots, ncol = 2)
+  ggsave(file.path(OUT_DIR, "VlnPlot_Uro_Spp1_Col4a345_ByStage.pdf"),
+         VlnPlot_Uro_Spp1Col4, width = 9, height = 7)
+  message("  Saved: VlnPlot_Uro_Spp1_Col4a345_ByStage.pdf")
+
+# Receptor dotplot: Spp1-relevant receptors (Cd44 + Itga*/Itgb* integrin
+# heterodimer partners forming the CellChatDB SPP1 pathway, plus Sdc4/
+# Adgrg6/Cd74/Tnfrsf21) in the non-Uro cell types that could plausibly be
+# on the receiving end of Uro-derived Spp1, split by stage. Complements the
+# Uro-only Spp1/Col4a3-5 DotPlot above: that one asks whether Uro is
+# inducing the ligand, this one asks whether the putative receiving niche
+# cell types carry the receptor at each stage.
+#
+# Built via per-stage DotPlot() + facet_wrap(), NOT DotPlot(split.by="Age")
+# -- confirmed interactively that split.by mode has no real AveExp color
+# scale to show: Seurat blends each split group's base color (cols) with
+# expression via lightness through scale_color_identity(), so there's no
+# continuous quantity for guide_colorbar() to draw (hence its "needs
+# continuous scales" warning and the missing legend), and worse, each age
+# panel would be normalized to its own hue as "max", making color intensity
+# incomparable across ages. Faceting on Age with one shared continuous
+# AveExp gradient fixes both: a real legend, and cross-age comparability.
+SenderReceptors <- c("Cd44","Itgav","Itgb1","Itgb3","Itgb4","Itgb5","Itgb6","Itgb8","Sdc4","Adgrg6","Cd74","Tnfrsf21")
+
+# for the selected cell types -- NP/UBP/IM (nephron progenitor, ureteric bud
+# progenitor, intermediate mesoderm) are real populations only at E16.5/P0;
+# they're developmentally expected to vanish after that (same "NP/IM vanish
+# after W3" point made in this script's header), so they're kept in
+# OtherCellTypes but their data is dropped at W3/W12/W52/W92 below, and
+# facet_wrap(scales="free_x") (not the default shared x-scale) is what
+# actually removes their axis tick from those later-stage panels -- with a
+# shared discrete x-scale, dropping the data rows alone still leaves an
+# empty tick/label per panel, since all panels share one axis built from
+# the full factor level set (confirmed interactively).
+obj@meta.data$celltype_final %>% table()
+OtherCellTypes <- c("NP", "UBP", "IM", "Endo", "Fib", "Macro", "T", "B/Plasma")
+Idents(obj) <- "celltype_final"
+OtherObj <- subset(obj, subset = celltype_final %in% OtherCellTypes)
+Idents(OtherObj) <- factor(Idents(OtherObj), levels = OtherCellTypes)
+
+receptor_gene_ids <- setNames(rownames(fm)[match(SenderReceptors, fm$gene_symbols)], SenderReceptors)
+missing_receptor_genes <- SenderReceptors[is.na(receptor_gene_ids)]
+if (length(missing_receptor_genes) > 0) {
+  warning("Receptor gene(s) not found in object, dropped: ", paste(missing_receptor_genes, collapse = ", "))
+}
+receptor_gene_ids <- receptor_gene_ids[!is.na(receptor_gene_ids)]
+
+symbol_by_id_receptor <- setNames(names(receptor_gene_ids), receptor_gene_ids)
+
+receptor_dotplot_data <- bind_rows(lapply(STAGE_ORDER, function(st) {
+  stage_cells <- WhichCells(OtherObj, expression = Age == st)
+  if (length(stage_cells) == 0) return(NULL)
+  stage_obj <- subset(OtherObj, cells = stage_cells)
+  d <- DotPlot(stage_obj, features = unname(receptor_gene_ids),
+               group.by = "celltype_final")$data
+  d$Age <- st
+  d
+}))
+receptor_dotplot_data$features.plot <- factor(receptor_dotplot_data$features.plot,
+                                               levels = rev(unname(receptor_gene_ids)))
+receptor_dotplot_data$id  <- factor(receptor_dotplot_data$id, levels = OtherCellTypes)
+receptor_dotplot_data$Age <- factor(receptor_dotplot_data$Age, levels = STAGE_ORDER)
+
+progenitor_types_early_only <- c("NP", "UBP", "IM")
+progenitor_drop_stages <- c("W3", "W12", "W52", "W92")
+receptor_dotplot_data <- receptor_dotplot_data %>%
+  filter(!(id %in% progenitor_types_early_only & Age %in% progenitor_drop_stages))
+
+DotPlot_receptors <- ggplot(receptor_dotplot_data,
+    aes(x = id, y = features.plot, color = avg.exp.scaled, size = pct.exp)) +
+  geom_point() +
+  scale_color_gradient(low = "lightgrey", high = "red", name = "AveExp") +
+  scale_size(range = c(0, 8), name = "PerExp") +
+  scale_y_discrete(labels = symbol_by_id_receptor[levels(receptor_dotplot_data$features.plot)]) +
+  facet_wrap(~ Age, nrow = 1, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+
+ggsave(file.path(OUT_DIR, "DotPlot_Receptors_OtherCellTypes_ByAge.pdf"),
+       DotPlot_receptors,
+       width = 10.5,
+       height = 4.5)
+message("  Saved: DotPlot_Receptors_OtherCellTypes_ByAge.pdf")
+
 
 ################################################################################
 # Per-stage CellChat runs
